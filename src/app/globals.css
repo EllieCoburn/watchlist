@@ -88,6 +88,47 @@
   text-transform: uppercase;
 }
 
+/* Calm range slider: hairline track, ink thumb. */
+@utility range-calm {
+  appearance: none;
+  height: 1.5rem;
+  background: transparent;
+  cursor: pointer;
+  &::-webkit-slider-runnable-track {
+    height: 3px;
+    border-radius: 9999px;
+    background: var(--color-canvas-deep);
+  }
+  &::-moz-range-track {
+    height: 3px;
+    border-radius: 9999px;
+    background: var(--color-canvas-deep);
+  }
+  &::-webkit-slider-thumb {
+    appearance: none;
+    margin-top: -8.5px;
+    width: 20px;
+    height: 20px;
+    border-radius: 9999px;
+    background: var(--color-ink);
+    border: 3px solid var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border-strong);
+  }
+  &::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 9999px;
+    background: var(--color-ink);
+    border: 3px solid var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border-strong);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 4px;
+    border-radius: 9999px;
+  }
+}
+
 @utility container-page {
   width: 100%;
   max-width: 1320px;
