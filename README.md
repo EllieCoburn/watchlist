@@ -84,3 +84,7 @@ layout can be reviewed without a database. They return 404 in production builds.
 
 Vercel-compatible. Set the same environment variables in the project settings. `NEXT_PUBLIC_SITE_URL`
 should be the deployed origin so auth emails link back correctly.
+
+Vercel applies environment variable changes only on the next deployment. After adding or editing a
+variable, trigger a redeploy from the Deployments tab or push a commit. The caption under the Watch
+page's time-range selector shows which market-data provider is active.
