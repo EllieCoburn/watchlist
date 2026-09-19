@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getMarketDataProvider } from "./providers";
-import { alignSeriesToQuote, computeRangeStats, type RangeStats } from "./range-stats";
+import { alignSeriesToQuote, computeRangeStats, tickWindow, type RangeStats } from "./range-stats";
 import type {
   MarketStatus,
   PricePoint,
@@ -39,66 +39,6 @@ export type PriceHistoryStore = {
   getTicks(symbol: string, fromMs: number, toMs: number): Promise<PricePoint[]>;
 };
 
-const MINUTE_MS = 60_000;
-
-/** Window and minimum coverage before recorded ticks replace a modeled intraday series. */
-function tickWindow(range: TimeRange, now: number): { from: number; minSpanMs: number } | null {
-  switch (range) {
-    case "live":
-      return { from: now - 10 * MINUTE_MS, minSpanMs: 3 * MINUTE_MS };
-    case "1H":
-      return { from: now - 60 * MINUTE_MS, minSpanMs: 15 * MINUTE_MS };
-    case "1D":
-      return { from: now - 24 * 60 * MINUTE_MS, minSpanMs: 30 * MINUTE_MS };
-    default:
-      return null;
-  }
-}
-
-export function getPricesBetween(
-  symbol: string,
-  fromMs: number,
-  toMs: number,
-): Promise<PricePoint[]> {
-  return getMarketDataProvider().getPricesBetween(symbol, fromMs, toMs);
-}
-
-export function getMarketStatus(): Promise<MarketStatus> {
-  return getMarketDataProvider().getMarketStatus();
-}
-
-export function searchSymbols(query: string): Promise<SymbolMatch[]> {
-  return getMarketDataProvider().searchSymbols(query);
-}
-
-export function lookupSymbol(symbol: string): Promise<SymbolMatch | null> {
-  return getMarketDataProvider().lookupSymbol(symbol);
-}
-
-export function getDataLabel(): string {
-  return getMarketDataProvider().dataLabel;
-}
-
-export type WatchSnapshot = {
-  quotes: Record<string, Quote>;
-  series: Record<string, number[]>;
-  /** Where each symbol's series came from. */
-  seriesSource: Record<string, SeriesSource>;
-  /** Change and low/high for the requested range, per symbol. */
-  rangeStats: Record<string, RangeStats>;
-  range: TimeRange;
-  status: MarketStatus;
-  dataLabel: string;
-  /** True when quotes are real market prices (any provider except the mock). */
-  quotesLive: boolean;
-  /**
-   * Symbols whose range figures fall back to today's numbers because real quotes sit on
-   * modeled history for the selected range. Empty for live / 1D and for the mock provider.
-   */
-  todayOnly: string[];
-  asOf: number;
-};
-
 /** Everything the Watch dashboard needs for a set of symbols in one call. */
 export async function getWatchSnapshot(
   symbols: string[],
@@ -131,7 +71,7 @@ export async function getWatchSnapshot(
 
       // Replace a modeled intraday series with recorded real ticks once enough exist.
       if (source === "modeled" && quotesLive && history && window) {
-        const ticks = await history.getTicks(s, window.from, now);
+        const ticks = await history.getTicks(s, window.from, window.to + 60_000);
         if (ticks.length > 1 && ticks[ticks.length - 1].t - ticks[0].t >= window.minSpanMs) {
           points = ticks;
           source = "recorded";

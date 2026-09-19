@@ -1,3 +1,4 @@
+import { latestSessionOpen, sessionClose } from "./market-hours";
 import type { PricePoint, Quote, TimeRange } from "./types";
 
 export type RangeStats = {
@@ -58,4 +59,28 @@ export function computeRangeStats(
 /** Caption for the low/high line, e.g. "1d", "1w". */
 export function rangeCaption(range: TimeRange): string {
   return range === "live" ? "1d" : range.toLowerCase();
+}
+
+const MINUTE_MS = 60_000;
+
+/**
+ * Window and minimum coverage before recorded ticks replace a modeled intraday series.
+ * Windows follow the trading session: after the close, "1H" means the session's last hour.
+ */
+export function tickWindow(
+  range: TimeRange,
+  now: number,
+): { from: number; to: number; minSpanMs: number } | null {
+  const open = latestSessionOpen(now);
+  const end = Math.min(now, sessionClose(open));
+  switch (range) {
+    case "live":
+      return { from: end - 10 * MINUTE_MS, to: end, minSpanMs: 3 * MINUTE_MS };
+    case "1H":
+      return { from: Math.max(open, end - 60 * MINUTE_MS), to: end, minSpanMs: 15 * MINUTE_MS };
+    case "1D":
+      return { from: open, to: end, minSpanMs: 30 * MINUTE_MS };
+    default:
+      return null;
+  }
 }

@@ -44,6 +44,40 @@ export function isPolygonConfigured(): boolean {
   );
 }
 
+/**
+ * Intraday bars for a completed session (the free plan does not serve the current day).
+ * `fromMs`/`toMs` bound the request; cached until well after the session is over.
+ */
+export async function fetchPolygonIntraday(
+  symbol: string,
+  minutes: number,
+  fromMs: number,
+  toMs: number,
+): Promise<PricePoint[]> {
+  const key = process.env.HISTORY_API_KEY;
+  if (!key) throw new Error("Polygon: HISTORY_API_KEY is not set");
+  const sym = symbol.toUpperCase();
+  return cached(
+    `polygon:intraday:${sym}:${minutes}:${isoDate(fromMs)}`,
+    12 * 60 * 60_000,
+    async () => {
+      if (!budget.take()) throw new Error("Polygon: request budget spent for this minute");
+      const url = `${BASE}/v2/aggs/ticker/${encodeURIComponent(sym)}/range/${minutes}/minute/${fromMs}/${toMs}?adjusted=true&sort=asc&limit=5000`;
+      const res = await fetch(url, {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${key}`, Accept: "application/json" },
+      });
+      if (!res.ok) throw new Error(`Polygon ${sym} intraday failed: ${res.status}`);
+      const data = (await res.json()) as PolygonAggsResponse;
+      if (data.error || data.status === "ERROR")
+        throw new Error(`Polygon ${sym}: ${data.error ?? data.message ?? "error"}`);
+      const points = mapPolygonAggs(data.results).filter((p) => p.t >= fromMs && p.t <= toMs);
+      if (points.length === 0) throw new Error(`Polygon ${sym}: no intraday bars for that session`);
+      return points;
+    },
+  );
+}
+
 /** About a year of daily bars, cached for an hour. Throws when the minute budget is spent. */
 export async function fetchPolygonDaily(symbol: string): Promise<PricePoint[]> {
   const key = process.env.HISTORY_API_KEY;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { alignSeriesToQuote, computeRangeStats, rangeCaption } from "./range-stats";
+import { alignSeriesToQuote, computeRangeStats, rangeCaption, tickWindow } from "./range-stats";
 import type { Quote } from "./types";
 
 const quote: Quote = {
@@ -89,5 +89,21 @@ describe("rangeCaption", () => {
   it("labels live as a day", () => {
     expect(rangeCaption("live")).toBe("1d");
     expect(rangeCaption("1W")).toBe("1w");
+  });
+});
+
+describe("tickWindow", () => {
+  it("follows the trading session rather than wall-clock time", () => {
+    const edt = (y: number, m: number, d: number, h: number, min = 0) =>
+      Date.UTC(y, m - 1, d, h + 4, min);
+    // Saturday: the 1H window is Friday's last hour.
+    const w = tickWindow("1H", edt(2026, 9, 19, 12))!;
+    expect(w.from).toBe(edt(2026, 9, 18, 15));
+    expect(w.to).toBe(edt(2026, 9, 18, 16));
+    // Friday 10:00: 1D runs from the open to now.
+    const d = tickWindow("1D", edt(2026, 9, 18, 10))!;
+    expect(d.from).toBe(edt(2026, 9, 18, 9, 30));
+    expect(d.to).toBe(edt(2026, 9, 18, 10));
+    expect(tickWindow("1M", 0)).toBeNull();
   });
 });

@@ -1,5 +1,6 @@
 import type { PricePoint, TimeRange } from "../types";
-import { fetchPolygonDaily, isPolygonConfigured } from "./polygon";
+import { latestSessionOpen, sessionClose } from "../market-hours";
+import { fetchPolygonDaily, fetchPolygonIntraday, isPolygonConfigured } from "./polygon";
 import { fetchDailyCloses } from "./stooq";
 import { fetchYahooChart, yahooParams } from "./yahoo";
 
@@ -33,6 +34,28 @@ export async function fetchFreeHistory(
       } catch (err) {
         attempts.push({
           source: src.name,
+          ok: false,
+          points: 0,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+  }
+
+  // Finished session: official minute bars from Polygon for the intraday ranges.
+  if (!dayBased && isPolygonConfigured()) {
+    const open = latestSessionOpen(now);
+    const close = sessionClose(open);
+    if (now >= close) {
+      const minutes = range === "1D" ? 5 : 1;
+      const from = range === "1D" ? open : close - (range === "live" ? 10 : 60) * 60_000;
+      try {
+        const points = await fetchPolygonIntraday(symbol, minutes, from, close);
+        attempts.push({ source: "polygon", ok: points.length > 1, points: points.length });
+        if (points.length > 1) return { points, attempts };
+      } catch (err) {
+        attempts.push({
+          source: "polygon",
           ok: false,
           points: 0,
           error: err instanceof Error ? err.message : String(err),
