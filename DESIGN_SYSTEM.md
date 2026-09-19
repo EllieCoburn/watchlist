@@ -43,18 +43,18 @@ Tokens are defined once in `src/app/globals.css` under Tailwind v4's `@theme` an
 | `--color-border-strong` | `#D3D1CA` | Focused input, dashed "new watchlist" button, hovered card |
 | `--color-ink` | `#1C1B18` | Primary text, primary buttons |
 | `--color-ink-secondary` | `#4A4843` | Body copy on marketing pages |
-| `--color-muted` | `#77736A` | Secondary text, labels, captions (4.6:1 on canvas) |
-| `--color-faint` | `#A8A398` | Tertiary text, disabled, sparkline baseline |
+| `--color-muted` | `#6B675E` | Secondary text, labels, captions (≥ 4.5:1 on every surface, including the segmented-control track) |
+| `--color-faint` | `#99948A` | Decorative only: icon-only controls, placeholders, tracks. Never body text (fails 4.5:1) |
 | `--color-gain` | `#6E9A7C` | Positive movement text, sparkline stroke, range tick (use `--color-gain-text` for small text) |
-| `--color-gain-text` | `#4E7A5F` | Positive change text ≥ 4.5:1 on white |
+| `--color-gain-text` | `#466F57` | Positive change text ≥ 4.5:1 on every surface |
 | `--color-gain-soft` | `#EEF4EF` | Sparkline area fill, positive badge fill |
 | `--color-loss` | `#C98A6E` | Negative movement sparkline stroke and range tick (salmon) |
-| `--color-loss-text` | `#B4573E` | Negative change text ≥ 4.5:1 on white |
+| `--color-loss-text` | `#A64C34` | Negative change text ≥ 4.5:1 on every surface |
 | `--color-loss-soft` | `#F8EEE9` | Sparkline area fill, negative badge fill |
 | `--color-accent` | `#1C1B18` | Primary CTA background (ink, not a brand color) |
 | `--color-accent-foreground` | `#FBFAF7` | Text on primary CTA |
 | `--color-focus` | `#8C7B5A` | Focus ring (warm, visible on cream and white) |
-| `--color-danger` | `#B4573E` | Destructive actions (shares the loss text hue deliberately) |
+| `--color-danger` | `#A64C34` | Destructive actions (shares the loss text hue deliberately) |
 
 Status colors (badges) reuse the neutrals: Planned = muted on canvas-deep, Open = gain, Closed = ink on surface-muted, Cancelled = faint.
 

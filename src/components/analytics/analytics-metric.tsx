@@ -13,7 +13,7 @@ const TONES = {
   ink: "text-ink",
   gain: "text-gain-text",
   loss: "text-loss-text",
-  faint: "text-faint",
+  faint: "text-muted",
 };
 
 export function AnalyticsMetric({ label, description, value, tone = "ink" }: AnalyticsMetricProps) {

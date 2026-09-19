@@ -29,7 +29,7 @@ export function TickerBreakdown({
       <p className="label-caps text-muted">{title}</p>
       <p className="mt-1 text-sm text-muted">{description}</p>
       {stats.length === 0 ? (
-        <p className="mt-5 text-sm text-faint">{emptyText}</p>
+        <p className="mt-5 text-sm text-muted">{emptyText}</p>
       ) : (
         <ol className="mt-5 space-y-3" role="list">
           {stats.map((s) => {

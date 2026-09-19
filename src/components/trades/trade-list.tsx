@@ -20,7 +20,7 @@ export function formatTradeDate(iso: string): string {
 }
 
 function pnlClass(pnl: number | null): string {
-  if (pnl == null) return "text-faint";
+  if (pnl == null) return "text-muted";
   if (pnl > 0) return "text-gain-text";
   if (pnl < 0) return "text-loss-text";
   return "text-ink";
@@ -29,7 +29,7 @@ function pnlClass(pnl: number | null): string {
 function PnlCell({ trade }: { trade: Trade }) {
   const pnl = tradeRealizedPnl(trade);
   const pct = tradeReturnPercent(trade);
-  if (pnl == null) return <span className="text-faint">—</span>;
+  if (pnl == null) return <span className="text-muted">—</span>;
   return (
     <span className={cn("tabular", pnlClass(pnl))}>
       <span className="sr-only">{pnl > 0 ? "gain " : pnl < 0 ? "loss " : ""}</span>

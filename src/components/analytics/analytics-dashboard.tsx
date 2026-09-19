@@ -125,7 +125,7 @@ export function AnalyticsDashboard({ trades }: { trades: Trade[] }) {
         />
       </section>
 
-      <p className="text-xs text-faint">Figures exclude fees, taxes and dividends.</p>
+      <p className="text-xs text-muted">Figures exclude fees, taxes and dividends.</p>
       <Disclaimer />
     </div>
   );

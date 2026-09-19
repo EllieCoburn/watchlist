@@ -83,7 +83,7 @@ function Prose({ title, text }: { title: string; text: string | null }) {
           {text}
         </p>
       ) : (
-        <p className="mt-1.5 text-sm text-faint">Nothing written yet.</p>
+        <p className="mt-1.5 text-sm text-muted">Nothing written yet.</p>
       )}
     </div>
   );
@@ -110,7 +110,7 @@ export function TradeDetail({ trade, chart }: { trade: Trade; chart?: ReactNode 
   const rr = tradeRiskReward(trade);
   const pnlTone =
     pnl == null
-      ? "text-faint"
+      ? "text-muted"
       : pnl > 0
         ? "text-gain-text"
         : pnl < 0
@@ -203,7 +203,7 @@ export function TradeDetail({ trade, chart }: { trade: Trade; chart?: ReactNode 
             <h3 className="text-sm font-medium text-ink-secondary">Did I follow my plan?</h3>
             <p className="mt-1.5 text-[0.9375rem] text-ink">
               {trade.followedPlan == null ? (
-                <span className="text-sm text-faint">Not answered yet.</span>
+                <span className="text-sm text-muted">Not answered yet.</span>
               ) : trade.followedPlan ? (
                 "Yes"
               ) : (

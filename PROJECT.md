@@ -266,6 +266,8 @@ Money handling: calculations run in floating point but every displayed value pas
 
 After each phase: `pnpm typecheck && pnpm lint && pnpm test`, fix everything, commit.
 
+**Status:** all seven phases are implemented. Verified in this environment: typecheck, lint, 71 unit tests, production build, axe-core scan (0 violations on 11 pages), keyboard navigation, and desktop / tablet / mobile screenshots of every view via the `/dev/*-preview` routes. Not yet verified: the authenticated flows against a live Supabase project (the build sandbox could not reach supabase.co).
+
 ---
 
 ## 10. Product language rules

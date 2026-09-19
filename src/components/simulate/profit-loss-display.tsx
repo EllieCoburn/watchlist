@@ -14,7 +14,7 @@ function Outcome({ kind, price, amount, returnPercent, positionValue }: OutcomeP
   const isTarget = kind === "target";
   const hasData = price != null && amount != null;
   const positive = hasData && amount >= 0;
-  const tone = !hasData ? "text-faint" : positive ? "text-gain-text" : "text-loss-text";
+  const tone = !hasData ? "text-muted" : positive ? "text-gain-text" : "text-loss-text";
   const word = !hasData ? "" : positive ? "gain" : "loss";
 
   return (

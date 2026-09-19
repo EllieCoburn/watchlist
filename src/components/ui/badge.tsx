@@ -7,7 +7,7 @@ const tones: Record<BadgeTone, string> = {
   neutral: "bg-canvas-deep text-ink-secondary",
   gain: "bg-gain-soft text-gain-text",
   loss: "bg-loss-soft text-loss-text",
-  faint: "bg-surface-muted text-faint",
+  faint: "bg-surface-muted text-muted",
 };
 
 export function Badge({

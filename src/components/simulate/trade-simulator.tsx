@@ -119,7 +119,7 @@ export function TradeSimulator({
             <div className="mb-6 flex items-baseline justify-between gap-4">
               <h2 className="font-serif text-2xl leading-tight text-ink">The plan</h2>
               {isExample ? (
-                <p className="label-caps text-faint">Example · change anything</p>
+                <p className="label-caps text-muted">Example · change anything</p>
               ) : null}
             </div>
             <SimulatorForm

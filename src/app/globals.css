@@ -14,18 +14,18 @@
   --color-border-strong: #d3d1ca;
   --color-ink: #1c1b18;
   --color-ink-secondary: #4a4843;
-  --color-muted: #77736a;
-  --color-faint: #a8a398;
+  --color-muted: #6b675e;
+  --color-faint: #99948a;
   --color-gain: #6e9a7c;
-  --color-gain-text: #4e7a5f;
+  --color-gain-text: #466f57;
   --color-gain-soft: #eef4ef;
   --color-loss: #c98a6e;
-  --color-loss-text: #b4573e;
+  --color-loss-text: #a64c34;
   --color-loss-soft: #f8eee9;
   --color-accent: #1c1b18;
   --color-accent-foreground: #fbfaf7;
   --color-focus: #8c7b5a;
-  --color-danger: #b4573e;
+  --color-danger: #a64c34;
 
   --font-serif: var(--font-instrument-serif), Georgia, "Times New Roman", serif;
   --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
