@@ -60,7 +60,9 @@ export function StockCard({ data, remove, rangeLabel, className }: StockCardProp
           {formatPrice(data.price)}
         </p>
         <p className={cn("tabular font-mono text-sm", changeColor)}>
-          <span className="sr-only">{directionWord} </span>
+          <span className="sr-only">
+            {directionWord} over {rangeLabel ?? "today"}{" "}
+          </span>
           {formatSignedNumber(data.change)}{" "}
           <span className="ml-1">{formatSignedPercent(data.changePercent)}</span>
         </p>

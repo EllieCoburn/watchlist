@@ -116,6 +116,7 @@ export function timeframeForSpan(spanMs: number): string {
 export class AlpacaMarketDataProvider implements MarketDataProvider {
   readonly id = "alpaca";
   readonly dataLabel = FEED === "sip" ? "live quotes" : "IEX quotes";
+  readonly historyModeled = false;
 
   constructor(
     private readonly keyId: string,

@@ -325,6 +325,7 @@ function buildBetween(symbol: string, fromMs: number, toMs: number, now: number)
 export class MockMarketDataProvider implements MarketDataProvider {
   readonly id = "mock";
   readonly dataLabel = "modeled prices · not live";
+  readonly historyModeled = true;
 
   private now(): number {
     return Date.now();

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getMarketDataProvider } from "./providers";
+import { alignSeriesToQuote, computeRangeStats, type RangeStats } from "./range-stats";
 import type { MarketStatus, PricePoint, Quote, SymbolMatch, TimeRange } from "./types";
 
 /**
@@ -47,8 +48,19 @@ export function getDataLabel(): string {
 export type WatchSnapshot = {
   quotes: Record<string, Quote>;
   series: Record<string, number[]>;
+  /** Change and low/high for the requested range, per symbol. */
+  rangeStats: Record<string, RangeStats>;
+  range: TimeRange;
   status: MarketStatus;
   dataLabel: string;
+  /** True when the series is modeled rather than market data. */
+  historyModeled: boolean;
+  /**
+   * True when real quotes sit on top of modeled history (e.g. Finnhub free tier). Range
+   * figures beyond today would then mix real and modeled numbers, so the cards keep today's
+   * change and low/high for every range and say so.
+   */
+  rangeFiguresUnavailable: boolean;
   asOf: number;
 };
 
@@ -66,9 +78,24 @@ export async function getWatchSnapshot(
   ]);
   const quoteMap: Record<string, Quote> = {};
   for (const q of quotes) quoteMap[q.symbol] = q;
+  const rangeFiguresUnavailable = provider.historyModeled && provider.id !== "mock";
   const series: Record<string, number[]> = {};
+  const rangeStats: Record<string, RangeStats> = {};
   unique.forEach((s, i) => {
-    series[s] = seriesList[i].map((p) => p.price);
+    const q = quoteMap[s];
+    const points = q ? alignSeriesToQuote(seriesList[i], q) : seriesList[i];
+    series[s] = points.map((p) => p.price);
+    if (q) rangeStats[s] = computeRangeStats(q, points, rangeFiguresUnavailable ? "1D" : range);
   });
-  return { quotes: quoteMap, series, status, dataLabel: provider.dataLabel, asOf: Date.now() };
+  return {
+    quotes: quoteMap,
+    series,
+    rangeStats,
+    range,
+    status,
+    dataLabel: provider.dataLabel,
+    historyModeled: provider.historyModeled,
+    rangeFiguresUnavailable,
+    asOf: Date.now(),
+  };
 }

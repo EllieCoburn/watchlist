@@ -16,7 +16,7 @@ export function PriceRangeIndicator({
   high,
   current,
   direction,
-  rangeLabel = "Daily",
+  rangeLabel = "1d",
 }: PriceRangeIndicatorProps) {
   const span = high - low;
   const ratio = span > 0 ? (current - low) / span : 0.5;

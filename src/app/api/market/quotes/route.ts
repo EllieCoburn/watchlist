@@ -12,7 +12,9 @@ const MAX_SYMBOLS = 60;
  */
 export async function GET(request: NextRequest) {
   const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user && process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const params = request.nextUrl.searchParams;
   const rangeParam = params.get("range") ?? "1D";

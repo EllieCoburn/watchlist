@@ -25,6 +25,10 @@ export class ResilientProvider implements MarketDataProvider {
     return this.primary.id;
   }
 
+  get historyModeled(): boolean {
+    return Date.now() - this.lastFailure < COOL_DOWN_MS ? true : this.primary.historyModeled;
+  }
+
   get dataLabel(): string {
     return Date.now() - this.lastFailure < COOL_DOWN_MS
       ? "modeled · live data unavailable"

@@ -135,6 +135,10 @@ export class FinnhubMarketDataProvider implements MarketDataProvider {
     return this.candlesUnavailable ? "live quotes · modeled history" : "live quotes";
   }
 
+  get historyModeled(): boolean {
+    return this.candlesUnavailable;
+  }
+
   private async request<T>(path: string, params: Record<string, string>): Promise<T> {
     if (!this.budget.take()) throw new Error("Finnhub request budget exhausted for this minute");
     const url = new URL(`${BASE}${path}`);

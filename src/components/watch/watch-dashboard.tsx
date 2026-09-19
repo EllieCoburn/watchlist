@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Notice } from "@/components/ui/notice";
 import type { Watchlist, WatchlistItem } from "@/lib/data/watchlists";
 import type { WatchSnapshot } from "@/lib/market-data/provider";
+import { rangeCaption } from "@/lib/market-data/range-stats";
 import { formatPrice } from "@/lib/finance/money";
 import { AddTickerSlot } from "./add-ticker-slot";
 import { LiveClock } from "./live-clock";
@@ -104,16 +105,25 @@ export function WatchDashboard({
   const slotCount = (filledRows + extraRows) * COLUMNS;
   const emptySlots = Math.max(0, slotCount - visibleItems.length);
 
+  // Figures follow the selected range unless the provider cannot supply history.
+  const figuresRange = snapshot.rangeFiguresUnavailable ? "1D" : range;
+  const caption = rangeCaption(figuresRange);
+  const rangeNote =
+    snapshot.rangeFiguresUnavailable && range !== "1D" && range !== "live"
+      ? "This data plan has no price history, so change and low/high show today. The sparkline shape is modeled."
+      : null;
+
   const cards: StockCardData[] = visibleItems.map((item) => {
     const q = snapshot.quotes[item.ticker];
+    const stats = snapshot.rangeStats[item.ticker];
     return {
       ticker: item.ticker,
       companyName: item.company_name ?? q?.companyName ?? "—",
       price: q?.price ?? 0,
-      change: q?.change ?? 0,
-      changePercent: q?.changePercent ?? 0,
-      low: q?.dayLow ?? 0,
-      high: q?.dayHigh ?? 0,
+      change: stats?.change ?? q?.change ?? 0,
+      changePercent: stats?.changePercent ?? q?.changePercent ?? 0,
+      low: stats?.low ?? q?.dayLow ?? 0,
+      high: stats?.high ?? q?.dayHigh ?? 0,
       sparkline: snapshot.series[item.ticker] ?? [],
     };
   });
@@ -152,6 +162,12 @@ export function WatchDashboard({
         </Notice>
       ) : null}
 
+      {rangeNote ? (
+        <p className="font-mono text-xs text-muted" role="status">
+          {rangeNote}
+        </p>
+      ) : null}
+
       <WatchlistTabs watchlists={watchlists} activeId={active?.id ?? null} />
 
       {active ? (
@@ -173,7 +189,7 @@ export function WatchDashboard({
               <li key={visibleItems[index].id}>
                 <StockCard
                   data={card}
-                  rangeLabel="1d"
+                  rangeLabel={caption}
                   remove={
                     <RemoveTickerButton
                       itemId={visibleItems[index].id}
@@ -215,7 +231,7 @@ export function WatchDashboard({
 
       <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6 font-mono text-sm text-muted">
         <p>
-          {listLabel} · {trackedLabel} · 1d high &amp; low
+          {listLabel} · {trackedLabel} · {caption} change, high &amp; low
           {cards.length > 0 && snapshot.quotes[cards[0].ticker] ? (
             <span className="sr-only">
               . Prices as of {formatPrice(snapshot.asOf / 1000)} seconds.

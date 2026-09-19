@@ -31,7 +31,7 @@ export default async function WatchPreviewPage() {
         active={watchlists[0]}
         items={items}
         initialSnapshot={snapshot}
-        polling={false}
+        polling
       />
     </main>
   );

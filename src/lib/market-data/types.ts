@@ -50,6 +50,8 @@ export interface MarketDataProvider {
   readonly id: string;
   /** Caption shown next to the polling status, e.g. "modeled history" or "delayed 15 min". */
   readonly dataLabel: string;
+  /** True when price history (series) is synthetic rather than from the market. */
+  readonly historyModeled: boolean;
   getQuote(symbol: string): Promise<Quote>;
   getQuotes(symbols: string[]): Promise<Quote[]>;
   getHistoricalPrices(symbol: string, range: TimeRange): Promise<PricePoint[]>;
