@@ -77,7 +77,7 @@ export function ProductPreview() {
               </span>
             ))}
           </div>
-          <p className="font-mono text-sm text-muted">polling every 10s · modeled history</p>
+          <p className="font-mono text-sm text-muted">polling every 10s · live quotes</p>
         </div>
       </div>
 

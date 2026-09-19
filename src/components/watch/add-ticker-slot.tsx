@@ -1,8 +1,9 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useActionState, useEffect, useId, useRef } from "react";
+import { useActionState, useId, useState } from "react";
 import { SubmitButton } from "@/components/auth/submit-button";
+import { TickerCombobox } from "@/components/ui/ticker-combobox";
 import { addTicker, type ActionResult } from "@/lib/actions/watchlists";
 import { cn } from "@/lib/utils";
 
@@ -16,15 +17,17 @@ type AddTickerSlotProps = {
 export function AddTickerSlot({ watchlistId, primary }: AddTickerSlotProps) {
   const [state, action] = useActionState<ActionResult, FormData>(addTicker, {});
   const inputId = useId();
-  const formRef = useRef<HTMLFormElement>(null);
 
-  useEffect(() => {
-    if (state.ok) formRef.current?.reset();
-  }, [state]);
+  // Clear the field after a successful add by remounting the combobox (state adjustment during render).
+  const [resetKey, setResetKey] = useState(0);
+  const [handled, setHandled] = useState(state);
+  if (state !== handled) {
+    setHandled(state);
+    if (state.ok) setResetKey((k) => k + 1);
+  }
 
   return (
     <form
-      ref={formRef}
       action={action}
       className={cn(
         "flex min-h-[19rem] flex-col justify-between rounded-[var(--radius-lg)] border border-dashed p-6 transition-colors duration-150 md:p-7",
@@ -39,19 +42,13 @@ export function AddTickerSlot({ watchlistId, primary }: AddTickerSlotProps) {
       </label>
 
       <div className="space-y-3">
-        <input
+        <TickerCombobox
           id={inputId}
-          name="ticker"
-          type="text"
-          inputMode="text"
-          autoCapitalize="characters"
-          autoComplete="off"
-          spellCheck={false}
-          maxLength={10}
-          placeholder="AAPL"
-          aria-invalid={Boolean(state.error)}
-          aria-describedby={state.error ? `${inputId}-error` : undefined}
-          className="tabular h-12 w-full rounded-[var(--radius-sm)] border border-border bg-surface px-3 font-mono text-lg uppercase tracking-[0.04em] text-ink placeholder:text-faint focus:border-border-strong focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          key={resetKey}
+          placeholder="AAPL or Apple"
+          className="h-12 text-lg"
+          invalid={Boolean(state.error)}
+          describedBy={state.error ? `${inputId}-error` : undefined}
         />
         {state.error ? (
           <p id={`${inputId}-error`} role="alert" className="text-sm text-loss-text">

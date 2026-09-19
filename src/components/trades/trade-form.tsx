@@ -5,6 +5,7 @@ import { useActionState, useId, useState } from "react";
 import { SubmitButton } from "@/components/auth/submit-button";
 import { Field } from "@/components/ui/field";
 import { Input, Select, Textarea } from "@/components/ui/input";
+import { TickerCombobox } from "@/components/ui/ticker-combobox";
 import { Notice } from "@/components/ui/notice";
 import { createTrade, updateTrade, type TradeFormState } from "@/lib/actions/trades";
 import type { Trade } from "@/lib/finance/trades";
@@ -52,18 +53,16 @@ export function TradeForm({ trade, defaults }: TradeFormProps) {
         </h2>
         <div className="grid gap-5 sm:grid-cols-3">
           <Field id={`${id}-ticker`} label="Ticker" error={e.ticker}>
-            <Input
+            <TickerCombobox
               id={`${id}-ticker`}
-              name="ticker"
               defaultValue={trade?.ticker ?? defaults?.ticker ?? ""}
-              placeholder="AAPL"
-              maxLength={10}
-              autoCapitalize="characters"
-              autoComplete="off"
-              spellCheck={false}
-              className="font-mono uppercase tracking-[0.04em]"
-              aria-invalid={Boolean(e.ticker)}
+              placeholder="AAPL or Apple"
               required
+              invalid={Boolean(e.ticker)}
+              onSelect={(m) => {
+                const company = document.getElementById(`${id}-company`) as HTMLInputElement | null;
+                if (company && !company.value) company.value = m.companyName;
+              }}
             />
           </Field>
           <Field

@@ -5,7 +5,7 @@ The visual reference is the Watch dashboard screenshot: warm off-white page, whi
 ### What the reference shows (recorded so it survives without the image)
 
 - Top-left: **Watch** in a large serif; beneath it a small dot + `MARKET CLOSED · WEEKEND` in spaced uppercase, muted.
-- Top-right: a pill segmented control on a slightly darker warm gray track — `Live 1H 1D 1W 1M 1Y` in mono, the active item (`1D`) a black pill with white text. Beneath it, right-aligned mono caption `polling every 10s · modeled history`.
+- Top-right: a pill segmented control on a slightly darker warm gray track — `Live 1H 1D 1W 1M 1Y` in mono, the active item (`1D`) a black pill with white text. Beneath it, right-aligned mono caption `polling every 10s · live quotes` (or `modeled prices · not live` on the mock provider).
 - A full-width hairline divider under the header.
 - **Watchlist** serif heading, with `3 of 3` in mono on the right.
 - Three white cards per row, ~20px radius, no perceptible border, a barely-there shadow. Inside each: ticker in **bold mono** (`AAPL`), company in sans muted (`Apple Inc`), a small `×` top-right; a large mono price with **no currency symbol** (`336.13`) followed on the same baseline by the change `−1.77 −0.53%` in rust or green mono; a sparkline **area** chart (thin line, very light fill in the same hue); then a thin gray range track with a short vertical tick in the gain/loss color at the current price position; `LOW 332.53` left and `HIGH 338.49` right in mono uppercase muted.

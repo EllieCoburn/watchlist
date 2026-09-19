@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { TickerCombobox } from "@/components/ui/ticker-combobox";
 import type { SizingMode } from "@/lib/finance/scenario";
 import { cn } from "@/lib/utils";
 
@@ -50,17 +51,12 @@ export function SimulatorForm({
     <div className="space-y-6">
       <div className="grid gap-5 sm:grid-cols-2">
         <Field id={`${id}-ticker`} label="Ticker" error={errors.ticker}>
-          <Input
+          <TickerCombobox
             id={`${id}-ticker`}
             value={values.ticker}
-            onChange={(e) => onChange({ ticker: e.target.value.toUpperCase() })}
-            placeholder="PLTR"
-            autoCapitalize="characters"
-            autoComplete="off"
-            spellCheck={false}
-            maxLength={10}
-            className="font-mono uppercase tracking-[0.04em]"
-            aria-invalid={Boolean(errors.ticker)}
+            onChange={(ticker) => onChange({ ticker })}
+            placeholder="PLTR or Palantir"
+            invalid={Boolean(errors.ticker)}
           />
         </Field>
         <Field id={`${id}-entry`} label="Current stock price" error={errors.entryPrice}>
