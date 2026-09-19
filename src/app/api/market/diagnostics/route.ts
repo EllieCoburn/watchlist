@@ -19,6 +19,8 @@ export async function GET() {
     activeProvider: provider.id,
     apiKeyPresent: Boolean(process.env.MARKET_DATA_API_KEY),
     dataLabel: provider.dataLabel,
+    historyProvider: process.env.HISTORY_PROVIDER ?? "(unset → free sources only)",
+    historyKeyPresent: Boolean(process.env.HISTORY_API_KEY),
     checkedAt: new Date().toISOString(),
   };
 

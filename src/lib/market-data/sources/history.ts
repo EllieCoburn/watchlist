@@ -1,4 +1,5 @@
 import type { PricePoint, TimeRange } from "../types";
+import { fetchPolygonDaily, isPolygonConfigured } from "./polygon";
 import { fetchDailyCloses } from "./stooq";
 import { fetchYahooChart, yahooParams } from "./yahoo";
 

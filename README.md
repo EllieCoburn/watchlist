@@ -53,6 +53,10 @@ deterministic modeled prices with no keys. Two live adapters are included:
 MARKET_DATA_PROVIDER=finnhub
 MARKET_DATA_API_KEY=<Finnhub token>
 
+# Daily history for 1W / 1M / 1Y on Finnhub. Polygon's free plan (5 calls/min, end-of-day bars):
+HISTORY_PROVIDER=polygon
+HISTORY_API_KEY=<Polygon key>
+
 # Alpaca: batch quotes and real bars on the free IEX feed. Scales far better.
 MARKET_DATA_PROVIDER=alpaca
 MARKET_DATA_API_KEY=<Alpaca key id>

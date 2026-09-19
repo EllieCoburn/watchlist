@@ -53,7 +53,14 @@ export async function fetchDailyCloses(symbol: string): Promise<PricePoint[]> {
     if (!res.ok) throw new Error(`Stooq ${sym} failed: ${res.status}`);
     const text = await res.text();
     const points = parseStooqCsv(text);
-    if (points.length === 0) throw new Error(`Stooq ${sym}: no data`);
+    if (points.length === 0) {
+      const hint = /exceeded|limit/i.test(text)
+        ? "daily hit limit exceeded"
+        : /<html/i.test(text)
+          ? "blocked (HTML page returned)"
+          : "no data";
+      throw new Error(`Stooq ${sym}: ${hint}`);
+    }
     return points;
   });
 }
