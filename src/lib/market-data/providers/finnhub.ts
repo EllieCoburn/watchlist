@@ -6,6 +6,7 @@ import {
   sessionClose,
 } from "../market-hours";
 import { RateBudget } from "../rate-limit";
+import { fetchFreeHistory } from "../sources/history";
 import { fetchDailyCloses } from "../sources/stooq";
 import { findSymbol, searchDirectory } from "../symbols";
 import type {
@@ -241,14 +242,14 @@ export class FinnhubMarketDataProvider implements MarketDataProvider {
       const real = await this.candles(sym, w.resolution, w.from, w.to);
       if (real && real.length > 1) return { points: real, source: "market" as const };
 
-      // 2. Real daily closes for the day-based ranges.
-      if (range === "1W" || range === "1M" || range === "1Y") {
-        const daily = await this.dailyCloses(sym);
-        if (daily) {
-          const count = range === "1W" ? 5 : range === "1M" ? 22 : 252;
-          const points = daily.filter((p) => p.t <= now).slice(-count);
-          if (points.length > 1) return { points, source: "market" as const };
-        }
+      // 2. Free history sources (end-of-day closes, then Yahoo's chart data).
+      const free = await fetchFreeHistory(sym, range, now);
+      if (free.points.length > 1) return { points: free.points, source: "market" as const };
+      for (const a of free.attempts) {
+        if (!a.ok)
+          console.warn(
+            `[market-data] ${a.source} history for ${sym} (${range}) unavailable: ${a.error ?? "no data"}`,
+          );
       }
 
       // 3. Modeled shape anchored to the real price. The caller may replace this with recorded ticks.
