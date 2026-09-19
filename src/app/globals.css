@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+/*
+  Design tokens — see DESIGN_SYSTEM.md.
+  Components consume these as utilities (bg-canvas, text-muted, text-gain-text, …).
+  Never hard-code hex values in components.
+*/
+@theme {
+  --color-canvas: #f4f3ef;
+  --color-canvas-deep: #e9e8e3;
+  --color-surface: #ffffff;
+  --color-surface-muted: #faf9f6;
+  --color-border: #e6e4de;
+  --color-border-strong: #d3d1ca;
+  --color-ink: #1c1b18;
+  --color-ink-secondary: #4a4843;
+  --color-muted: #77736a;
+  --color-faint: #a8a398;
+  --color-gain: #6e9a7c;
+  --color-gain-text: #4e7a5f;
+  --color-gain-soft: #eef4ef;
+  --color-loss: #c98a6e;
+  --color-loss-text: #b4573e;
+  --color-loss-soft: #f8eee9;
+  --color-accent: #1c1b18;
+  --color-accent-foreground: #fbfaf7;
+  --color-focus: #8c7b5a;
+  --color-danger: #b4573e;
+
+  --font-serif: var(--font-instrument-serif), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", Menlo, monospace;
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  --shadow-card: 0 1px 2px rgba(28, 27, 24, 0.04);
+  --shadow-pop: 0 12px 32px rgba(28, 27, 24, 0.08);
+
+  --ease-calm: cubic-bezier(0.2, 0, 0, 1);
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+    background-color: var(--color-canvas);
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background-color: var(--color-canvas-deep);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Uppercase, letter-spaced mono caption used for status lines and data labels. */
+@utility label-caps {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@utility container-page {
+  width: 100%;
+  max-width: 1320px;
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+  @media (width >= 48rem) {
+    padding-inline: 2.5rem;
+  }
+}

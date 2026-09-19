@@ -25,7 +25,7 @@ The product has two distinct layers that share one design system.
 | Framework | **Next.js 16** (App Router, TypeScript) | Server components by default; client components only for interactivity |
 | Styling | **Tailwind CSS v4** | CSS-first config; design tokens live in `src/app/globals.css` under `@theme` |
 | Auth + DB | **Supabase** (Auth, Postgres, Row Level Security) | `@supabase/ssr` for cookie-based sessions in server components, route handlers and proxy |
-| Charts | **Recharts** | Sparklines, performance-over-time, small breakdown charts |
+| Charts | **Recharts** + inline SVG | Recharts for analytics charts; stock-card sparklines are tiny hand-rolled SVGs so they render on the server with no layout shift |
 | Icons | **lucide-react** | Used sparingly |
 | Fonts | `next/font/google` | Serif display, sans body, mono for numbers (see DESIGN_SYSTEM.md) |
 | Tests | **Vitest** | Unit tests for financial calculation utilities and formatting |
@@ -150,7 +150,7 @@ supabase/
 - **Flows:**
   - Sign up → Supabase sends confirmation email (if enabled in project settings) → `/auth/callback` → `/app`.
   - Log in → server action → redirect to `next` or `/app`.
-  - Log out → `POST /auth/signout` → redirect `/`.
+  - Log out → `signOut` server action (Settings) or `POST /auth/signout` → redirect `/`.
   - Forgot password → `resetPasswordForEmail` with `redirectTo=/auth/callback?next=/reset-password` → user sets new password.
 - **Server-side only secrets:** only the anon key is public (`NEXT_PUBLIC_SUPABASE_ANON_KEY`). The service-role key is never used in the app. Market-data API keys are server-only env vars.
 
@@ -198,8 +198,8 @@ Principles: small components, server components by default, client boundary as l
 | Watch | `MarketStatus` | server | "MARKET OPEN" / "MARKET CLOSED · WEEKEND" |
 | | `TimeRangeSelector` | client | Live · 1H · 1D · 1W · 1M · 1Y segmented control |
 | | `WatchlistSection` | client | Heading, count, add-ticker form, grid of `StockCard`s, watchlist switcher (create/rename/delete) |
-| | `StockCard` | client | Ticker, name, price, $ and % change, sparkline, day low/high, `PriceRangeIndicator`, remove button |
-| | `SparklineChart` | client | Tiny Recharts line, colored by direction |
+| | `StockCard` | server-safe | Ticker, name, price, change and %, sparkline, day low/high, `PriceRangeIndicator`; remove control passed in as a slot |
+| | `SparklineChart` | server-safe | Tiny inline-SVG area line, colored by direction |
 | | `PriceRangeIndicator` | server-safe | Position of current price between low and high |
 | Simulate | `TradeSimulator` | client | Owns form state, calls pure calc utils, renders sub-displays |
 | | `ScenarioSlider` | client | Hypothetical price slider + "If X reaches $Y" readout |
