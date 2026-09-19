@@ -1,6 +1,16 @@
 # Watchlist — Design System
 
-The visual reference is the Watch dashboard screenshot: warm cream page, white rounded cards, hairline borders, generous whitespace, a large serif title, quiet monospaced numbers, soft green for gains and soft rust for losses. Everything below exists to reproduce that feeling consistently, not to redesign it.
+The visual reference is the Watch dashboard screenshot: warm off-white page, white rounded cards with almost no visible border, generous whitespace, a large serif title, monospaced numbers and captions, soft green for gains and soft rust for losses. Everything below exists to reproduce that feeling consistently, not to redesign it.
+
+### What the reference shows (recorded so it survives without the image)
+
+- Top-left: **Watch** in a large serif; beneath it a small dot + `MARKET CLOSED · WEEKEND` in spaced uppercase, muted.
+- Top-right: a pill segmented control on a slightly darker warm gray track — `Live 1H 1D 1W 1M 1Y` in mono, the active item (`1D`) a black pill with white text. Beneath it, right-aligned mono caption `polling every 10s · modeled history`.
+- A full-width hairline divider under the header.
+- **Watchlist** serif heading, with `3 of 3` in mono on the right.
+- Three white cards per row, ~20px radius, no perceptible border, a barely-there shadow. Inside each: ticker in **bold mono** (`AAPL`), company in sans muted (`Apple Inc`), a small `×` top-right; a large mono price with **no currency symbol** (`336.13`) followed on the same baseline by the change `−1.77 −0.53%` in rust or green mono; a sparkline **area** chart (thin line, very light fill in the same hue); then a thin gray range track with a short vertical tick in the gain/loss color at the current price position; `LOW 332.53` left and `HIGH 338.49` right in mono uppercase muted.
+- Below the grid: `+ ADD A LINE OF THREE` in mono uppercase muted (adds another row of card slots), then a dashed-border pill `+ NEW WATCHLIST`.
+- Footer line: `1 watchlist · 3 tracked · 1d high & low` left, live clock `12:12:53` right, both mono muted.
 
 > If a decision is ambiguous, prioritise in order: simplicity → visual calm → readability → intuitive understanding → whitespace → consistency.
 
@@ -25,24 +35,26 @@ Tokens are defined once in `src/app/globals.css` under Tailwind v4's `@theme` an
 
 | Token | Value | Use |
 |---|---|---|
-| `--color-canvas` | `#F6F3EC` | Page background (warm cream) |
-| `--color-canvas-deep` | `#EFEBE2` | Subtle section contrast on landing, table header rows |
+| `--color-canvas` | `#F4F3EF` | Page background (warm off-white, as in the reference) |
+| `--color-canvas-deep` | `#E9E8E3` | Segmented-control track, range-indicator track, skeletons, subtle section contrast |
 | `--color-surface` | `#FFFFFF` | Cards, inputs, dialogs |
 | `--color-surface-muted` | `#FAF8F3` | Hover state on rows, secondary card fill |
-| `--color-border` | `#E6E1D6` | Card and input borders (hairline) |
-| `--color-border-strong` | `#D5CFC2` | Focused input, active segmented control |
+| `--color-border` | `#E6E4DE` | Hairline dividers and input borders; cards use it at 60% opacity so it is barely perceptible |
+| `--color-border-strong` | `#D3D1CA` | Focused input, dashed "new watchlist" button, hovered card |
 | `--color-ink` | `#1C1B18` | Primary text, primary buttons |
 | `--color-ink-secondary` | `#4A4843` | Body copy on marketing pages |
 | `--color-muted` | `#77736A` | Secondary text, labels, captions (4.6:1 on canvas) |
 | `--color-faint` | `#A8A398` | Tertiary text, disabled, sparkline baseline |
-| `--color-gain` | `#4E7A5F` | Positive movement text/icons (5.0:1 on white) |
-| `--color-gain-soft` | `#E4EEE6` | Positive badge / range indicator fill |
-| `--color-loss` | `#B4573E` | Negative movement text/icons (4.6:1 on white) |
-| `--color-loss-soft` | `#F5E4DD` | Negative badge fill |
+| `--color-gain` | `#6E9A7C` | Positive movement text, sparkline stroke, range tick (use `--color-gain-text` for small text) |
+| `--color-gain-text` | `#4E7A5F` | Positive change text ≥ 4.5:1 on white |
+| `--color-gain-soft` | `#EEF4EF` | Sparkline area fill, positive badge fill |
+| `--color-loss` | `#C98A6E` | Negative movement sparkline stroke and range tick (salmon) |
+| `--color-loss-text` | `#B4573E` | Negative change text ≥ 4.5:1 on white |
+| `--color-loss-soft` | `#F8EEE9` | Sparkline area fill, negative badge fill |
 | `--color-accent` | `#1C1B18` | Primary CTA background (ink, not a brand color) |
 | `--color-accent-foreground` | `#FBFAF7` | Text on primary CTA |
 | `--color-focus` | `#8C7B5A` | Focus ring (warm, visible on cream and white) |
-| `--color-danger` | `#B4573E` | Destructive actions (shares the loss hue deliberately) |
+| `--color-danger` | `#B4573E` | Destructive actions (shares the loss text hue deliberately) |
 
 Status colors (badges) reuse the neutrals: Planned = muted on canvas-deep, Open = gain, Closed = ink on surface-muted, Cancelled = faint.
 
@@ -52,9 +64,9 @@ Loaded with `next/font/google`, exposed as CSS variables and `@theme` font famil
 
 | Token | Family | Use |
 |---|---|---|
-| `--font-serif` | **Instrument Serif** (fallback: Georgia, serif) | Page titles ("Watch"), landing headline, section headings, large hero numbers |
-| `--font-sans` | **Inter** (fallback: system-ui) | Body, labels, buttons, navigation |
-| `--font-mono` | **JetBrains Mono** (fallback: ui-monospace) | Prices, changes, tickers, table figures, timestamps, "MARKET OPEN" |
+| `--font-serif` | **Instrument Serif** (fallback: Georgia, serif) | Page titles ("Watch"), section headings ("Watchlist"), landing headline |
+| `--font-sans` | **Inter** (fallback: system-ui) | Company names, body copy, form labels, buttons on marketing pages |
+| `--font-mono` | **IBM Plex Mono** (fallback: ui-monospace) | Tickers, prices, changes, segmented control, captions, uppercase status labels, clock — the reference uses mono for nearly all small UI text |
 
 Type scale (rem):
 
@@ -65,8 +77,9 @@ Type scale (rem):
 | `heading` | 1.5 / 1.25 | serif | "Watchlist", card group headings |
 | `subheading` | 1.125 / 1.4 | sans, medium | Dialog titles, form section titles |
 | `body` | 0.9375 / 1.6 | sans | Paragraphs |
-| `label` | 0.75 / 1.2, tracking 0.08em, uppercase | mono or sans | "MARKET OPEN", "DAILY LOW", field labels |
-| `price-lg` | 1.75 / 1.1, tabular | mono | Current price on a stock card |
+| `label` | 0.75 / 1.2, tracking 0.08em, uppercase | mono | "MARKET OPEN", "LOW 332.53", "+ NEW WATCHLIST" |
+| `ticker` | 1.0 / 1.2, bold, tracking 0.04em | mono | Card ticker |
+| `price-lg` | 2.25 / 1.0, tabular | mono | Current price on a stock card (no currency symbol on cards) |
 | `price` | 1.0 / 1.2, tabular | mono | Table figures, change values |
 | `caption` | 0.75 / 1.4 | sans | "polling every 10s", helper text |
 
@@ -107,7 +120,7 @@ Tailwind defaults: `sm` 640, `md` 768, `lg` 1024, `xl` 1280. Mobile-first.
 ## 3. Core components (visual spec)
 
 ### Card
-White surface, 1px border, `radius-lg`, `shadow-card`, `p-6`. Hover (if clickable): border → `border-strong`, no lift.
+White surface, `radius-lg`, `shadow-card`, 1px border at 60% opacity (effectively invisible against the off-white page, present for contrast on any lighter background), `p-6`. Hover (if clickable): border → `border-strong`, no lift.
 
 ### Buttons
 - **Primary:** ink background, cream text, `radius-md`, `h-11 px-5`, sans medium. Hover: 90% opacity. 
@@ -120,25 +133,30 @@ White surface, 1px border, `radius-lg`, `shadow-card`, `p-6`. Hover (if clickabl
 Surface fill, 1px border, `radius-sm`, `h-11 px-3`, sans. Labels sit above in `label` style (sentence case for form labels, uppercase only for data captions). Error text in loss color with an icon and text, not color alone.
 
 ### Segmented control (`TimeRangeSelector`)
-Pill container on `surface-muted` with border; active segment is white with `border-strong` and ink text, inactive segments muted. Keyboard: arrow keys move, it is a `radiogroup`.
+Fully rounded pill track in `canvas-deep`, no border, `p-1`. Items in mono `0.875rem`, muted; the active item is an **ink pill with cream text**. Keyboard: arrow keys move, it is a `radiogroup`.
 
 ### Stock card
 ```
 ┌──────────────────────────────────────────┐
-│ PLTR                              ×      │  ticker mono label · remove ghost icon-button (visible on hover/focus, always on touch)
-│ Palantir Technologies                    │  company sans muted
+│ AAPL                              ×      │  ticker bold mono · remove ghost icon-button, muted
+│ Apple Inc                                │  company sans muted
 │                                          │
-│ $175.00                     ╱╲__╱╲_╱     │  price-lg mono · sparkline right, 80×32, gain/loss stroke
-│ +$2.14  +1.24%                           │  price mono in gain/loss color with sign; sr-only "up"/"down"
+│ 336.13  −1.77 −0.53%                     │  price-lg mono (no $) · change + % on the same baseline, loss/gain text color, sign always present
 │                                          │
-│ DAILY LOW               DAILY HIGH       │  label caps muted
-│ $172.10  ●───────○──────  $176.80        │  PriceRangeIndicator: faint track, gain/loss dot at current position
+│   ╱╲╲__╱╲╲_╱╲  (area sparkline)          │  full card width, ~96px tall, 1.5px stroke + very light fill in the same hue
+│ ────────────┃───────────────────────     │  PriceRangeIndicator: 2px canvas-deep track, short vertical tick in gain/loss color at current position
+│ LOW 332.53                 HIGH 338.49   │  mono label caps muted
 └──────────────────────────────────────────┘
 ```
-Whole card is a `<button>`/link for detail (later); the remove control stops propagation.
+Whole card is a `<button>`/link for detail (later); the remove control stops propagation. A visually hidden "up"/"down" word accompanies the change so direction is not color-only.
+
+### Below the grid
+- `+ ADD A LINE OF THREE`: mono uppercase ghost button, muted → ink on hover. Adds another row of three empty add-ticker slots.
+- `+ NEW WATCHLIST`: dashed 1px `border-strong` pill, mono uppercase, `px-6 h-14`.
+- Footer status line: mono caption muted, `1 watchlist · 3 tracked · 1d high & low` left, live `HH:MM:SS` clock right.
 
 ### Market status
-Uppercase mono label, small dot before it: gain color when open, faint when closed. "MARKET OPEN" / "MARKET CLOSED · WEEKEND" / "MARKET CLOSED · AFTER HOURS".
+Uppercase mono label with 0.08em tracking, muted, small filled dot before it: gain color when open, faint when closed. "MARKET OPEN" / "MARKET CLOSED · WEEKEND" / "MARKET CLOSED · AFTER HOURS".
 
 ### Gain / loss display
 Sign always present (`+$114.28`, `−$57.14`, true minus sign U+2212). Color from tokens. Accompanying word where space allows: "Potential profit", "Potential loss". Never color alone.
@@ -160,8 +178,8 @@ Skeleton blocks in `canvas-deep` with `radius-sm`, no shimmer animation stronger
 
 ## 4. Charts
 
-- Recharts, no gridlines on sparklines; one faint horizontal baseline at previous close.
-- Stroke 1.5px, gain/loss color, no dots, no area fill on stock cards. Performance chart may use a 6% opacity area fill.
+- Recharts, no gridlines or axes on sparklines.
+- Stock-card sparkline: 1.5px stroke in gain/loss color, no dots, area fill in the matching `-soft` token (as in the reference). Performance chart uses the same treatment in ink/gain.
 - Axes in `faint`, mono `caption` size, tick count small.
 - Tooltips: surface card with border, mono figures.
 
