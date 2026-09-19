@@ -27,11 +27,19 @@ export function parseStooqCsv(csv: string): PricePoint[] {
   if (lines.length < 2 || !lines[0].toLowerCase().startsWith("date")) return [];
   const points: PricePoint[] = [];
   for (const line of lines.slice(1)) {
-    const [date, , , , close] = line.split(",");
+    const [date, , high, low, close] = line.split(",");
     const t = closeTimestamp(date);
     const price = Number(close);
-    if (t != null && Number.isFinite(price) && price > 0)
-      points.push({ t, price: Math.round(price * 10_000) / 10_000 });
+    if (t == null || !Number.isFinite(price) || !(price > 0)) continue;
+    const r = (v: number) => Math.round(v * 10_000) / 10_000;
+    const lo = Number(low);
+    const hi = Number(high);
+    points.push({
+      t,
+      price: r(price),
+      low: Number.isFinite(lo) && lo > 0 ? r(lo) : undefined,
+      high: Number.isFinite(hi) && hi > 0 ? r(hi) : undefined,
+    });
   }
   points.sort((a, b) => a.t - b.t);
   return points;

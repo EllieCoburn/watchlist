@@ -53,6 +53,21 @@ export default async function WatchPage({ searchParams }: PageProps<"/app/watch"
     supabaseHistoryStore(),
   );
 
+  // Fill in company names that were unknown when the ticker was added (e.g. before live data was on).
+  const missing = items.filter((i) => !i.company_name && snapshot.quotes[i.ticker]?.companyName);
+  if (missing.length > 0) {
+    const supabase = await createClient();
+    await Promise.all(
+      missing.map((i) =>
+        supabase
+          .from("watchlist_items")
+          .update({ company_name: snapshot.quotes[i.ticker]!.companyName })
+          .eq("id", i.id),
+      ),
+    );
+    for (const i of missing) i.company_name = snapshot.quotes[i.ticker]!.companyName;
+  }
+
   return (
     <WatchDashboard
       watchlists={watchlists}
