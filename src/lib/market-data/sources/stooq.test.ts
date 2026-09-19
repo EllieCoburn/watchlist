@@ -14,6 +14,8 @@ describe("stooq", () => {
     expect(pts).toHaveLength(2);
     expect(pts[0].price).toBe(337.9);
     expect(pts[1].price).toBe(336.13);
+    expect(pts[1].low).toBe(332.53);
+    expect(pts[1].high).toBe(338.49);
     expect(pts[0].t).toBeLessThan(pts[1].t);
     // 16:00 ET on 18 Sept 2026 = 20:00 UTC
     expect(pts[1].t).toBe(Date.UTC(2026, 8, 18, 20));

@@ -43,13 +43,14 @@ export function computeRangeStats(
 
   const first = points[0].price;
   if (!(first > 0)) return day;
-  const prices = points.map((p) => p.price);
+  const lows = points.map((p) => p.low ?? p.price);
+  const highs = points.map((p) => p.high ?? p.price);
   const change = quote.price - first;
   return {
     change: round4(change),
     changePercent: round4((change / first) * 100),
-    low: round4(Math.min(...prices, quote.price)),
-    high: round4(Math.max(...prices, quote.price)),
+    low: round4(Math.min(...lows, quote.price, quote.dayLow)),
+    high: round4(Math.max(...highs, quote.price, quote.dayHigh)),
     basis: "range",
   };
 }

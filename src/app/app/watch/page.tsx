@@ -11,7 +11,7 @@ import {
 } from "@/lib/data/watchlists";
 import { supabaseHistoryStore } from "@/lib/data/price-ticks";
 import { getWatchSnapshot } from "@/lib/market-data/provider";
-import { getCurrentUser } from "@/lib/supabase/server";
+import { createClient, getCurrentUser } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Watch" };
 

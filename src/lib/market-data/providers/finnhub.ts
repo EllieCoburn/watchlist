@@ -158,7 +158,9 @@ export class FinnhubMarketDataProvider implements MarketDataProvider {
     return cached(`finnhub:quote:${sym}`, QUOTE_TTL_MS, async () => {
       try {
         const raw = await this.request<FinnhubQuote>("/quote", { symbol: sym });
-        const q = mapQuote(sym, raw, findSymbol(sym)?.companyName ?? null, Date.now());
+        const name =
+          findSymbol(sym)?.companyName ?? (await this.lookupSymbol(sym))?.companyName ?? null;
+        const q = mapQuote(sym, raw, name, Date.now());
         if (!q) throw new Error(`No quote for ${sym}`);
         this.lastQuotes.set(sym, q);
         return q;

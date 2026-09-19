@@ -22,6 +22,9 @@ export type PricePoint = {
   /** Epoch milliseconds. */
   t: number;
   price: number;
+  /** Intraday extremes for the bar ending at `t`, when the source provides them. */
+  low?: number;
+  high?: number;
 };
 
 /** Where a series came from. "modeled" is synthetic; the others are real market prices. */

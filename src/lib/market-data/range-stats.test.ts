@@ -41,6 +41,16 @@ describe("computeRangeStats", () => {
     expect(s.high).toBe(120);
   });
 
+  it("uses bar lows and highs when the source provides them", () => {
+    const bars = [
+      { t: 1000, price: 100, low: 90, high: 104 },
+      { t: 2000, price: 102, low: 99, high: 125 },
+    ];
+    const s = computeRangeStats(quote, bars, "1M");
+    expect(s.low).toBe(90);
+    expect(s.high).toBe(125);
+  });
+
   it("falls back to session figures when the series is too short", () => {
     expect(computeRangeStats(quote, [{ t: 1, price: 100 }], "1M").basis).toBe("day");
   });
