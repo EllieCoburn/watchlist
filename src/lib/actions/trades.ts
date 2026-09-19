@@ -7,6 +7,7 @@ import { lookupSymbol } from "@/lib/market-data/provider";
 import { normalizeTicker } from "@/lib/market-data/symbols";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import type { Database, TradeStatus } from "@/lib/supabase/types";
+import { describeDbError } from "@/lib/supabase/errors";
 import { parseOptionalPositiveNumber } from "@/lib/validation/numbers";
 
 export type TradeFormState = {
@@ -153,7 +154,10 @@ export async function createTrade(
 
   const supabase = await createClient();
   const { data, error } = await supabase.from("trades").insert(parsed.data).select("id").single();
-  if (error || !data) return { error: "Could not save the trade. Please try again." };
+  if (error || !data)
+    return {
+      error: describeDbError("Could not save the trade", error ?? { message: "no row returned" }),
+    };
 
   revalidatePath("/app/trades");
   revalidatePath("/app/analytics");
@@ -177,7 +181,7 @@ export async function updateTrade(
     .update(parsed.data)
     .eq("id", id)
     .eq("user_id", user.id);
-  if (error) return { error: "Could not save the trade. Please try again." };
+  if (error) return { error: describeDbError("Could not save the trade", error) };
 
   revalidatePath("/app/trades");
   revalidatePath(`/app/trades/${id}`);
@@ -191,7 +195,7 @@ export async function deleteTrade(id: string): Promise<{ error?: string }> {
 
   const supabase = await createClient();
   const { error } = await supabase.from("trades").delete().eq("id", id).eq("user_id", user.id);
-  if (error) return { error: "Could not delete the trade." };
+  if (error) return { error: describeDbError("Could not delete the trade", error) };
 
   revalidatePath("/app/trades");
   revalidatePath("/app/analytics");

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { describeDbError } from "@/lib/supabase/errors";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { validateDisplayName } from "@/lib/validation/auth";
 
@@ -21,7 +22,7 @@ export async function updateDisplayName(
     .from("profiles")
     .update({ display_name: displayName || null })
     .eq("id", user.id);
-  if (error) return { error: "Could not save your name. Please try again." };
+  if (error) return { error: describeDbError("Could not save your name", error) };
 
   revalidatePath("/app", "layout");
   return { success: "Saved." };

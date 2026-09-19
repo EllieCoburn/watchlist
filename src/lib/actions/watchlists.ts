@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { lookupSymbol } from "@/lib/market-data/provider";
 import { normalizeTicker } from "@/lib/market-data/symbols";
+import { describeDbError } from "@/lib/supabase/errors";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 
 export type ActionResult = { error?: string; ok?: true };
@@ -35,7 +36,13 @@ export async function createWatchlist(
     .insert({ user_id: user.id, name, position: count ?? 0 })
     .select("id")
     .single();
-  if (error || !data) return { error: "Could not create the watchlist. Please try again." };
+  if (error || !data)
+    return {
+      error: describeDbError(
+        "Could not create the watchlist",
+        error ?? { message: "no row returned" },
+      ),
+    };
 
   revalidatePath(WATCH_PATH);
   redirect(`${WATCH_PATH}?list=${data.id}`);
@@ -58,7 +65,7 @@ export async function renameWatchlist(
     .update({ name })
     .eq("id", id)
     .eq("user_id", user.id);
-  if (error) return { error: "Could not rename the watchlist." };
+  if (error) return { error: describeDbError("Could not rename the watchlist", error) };
 
   revalidatePath(WATCH_PATH);
   return { ok: true };
@@ -70,7 +77,7 @@ export async function deleteWatchlist(id: string): Promise<ActionResult> {
 
   const supabase = await createClient();
   const { error } = await supabase.from("watchlists").delete().eq("id", id).eq("user_id", user.id);
-  if (error) return { error: "Could not delete the watchlist." };
+  if (error) return { error: describeDbError("Could not delete the watchlist", error) };
 
   revalidatePath(WATCH_PATH);
   redirect(WATCH_PATH);
@@ -100,7 +107,7 @@ export async function addTicker(_prev: ActionResult, formData: FormData): Promis
   });
   if (error) {
     if (error.code === "23505") return { error: `${ticker} is already on this watchlist.` };
-    return { error: "Could not add the ticker. Please try again." };
+    return { error: describeDbError("Could not add the ticker", error) };
   }
 
   revalidatePath(WATCH_PATH);
@@ -117,7 +124,7 @@ export async function removeTicker(itemId: string): Promise<ActionResult> {
     .delete()
     .eq("id", itemId)
     .eq("user_id", user.id);
-  if (error) return { error: "Could not remove the ticker." };
+  if (error) return { error: describeDbError("Could not remove the ticker", error) };
 
   revalidatePath(WATCH_PATH);
   return { ok: true };

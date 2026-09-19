@@ -6,6 +6,7 @@ import { roundTo } from "@/lib/finance/money";
 import { lookupSymbol } from "@/lib/market-data/provider";
 import { normalizeTicker } from "@/lib/market-data/symbols";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { describeDbError } from "@/lib/supabase/errors";
 import { parseOptionalPositiveNumber, parsePositiveNumber } from "@/lib/validation/numbers";
 
 export type ScenarioActionState = { error?: string; ok?: true; id?: string };
@@ -76,7 +77,13 @@ export async function saveScenario(
     })
     .select("id")
     .single();
-  if (error || !data) return { error: "Could not save the scenario. Please try again." };
+  if (error || !data)
+    return {
+      error: describeDbError(
+        "Could not save the scenario",
+        error ?? { message: "no row returned" },
+      ),
+    };
 
   revalidatePath(SIMULATE_PATH);
   return { ok: true, id: data.id };
@@ -92,7 +99,7 @@ export async function deleteScenario(id: string): Promise<ScenarioActionState> {
     .delete()
     .eq("id", id)
     .eq("user_id", user.id);
-  if (error) return { error: "Could not delete the scenario." };
+  if (error) return { error: describeDbError("Could not delete the scenario", error) };
 
   revalidatePath(SIMULATE_PATH);
   return { ok: true };
@@ -130,7 +137,13 @@ export async function convertScenarioToTrade(
     })
     .select("id")
     .single();
-  if (error || !data) return { error: "Could not create the planned trade. Please try again." };
+  if (error || !data)
+    return {
+      error: describeDbError(
+        "Could not create the planned trade",
+        error ?? { message: "no row returned" },
+      ),
+    };
 
   revalidatePath("/app/trades");
   redirect(`/app/trades/${data.id}`);
