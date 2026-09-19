@@ -300,6 +300,28 @@ function buildSeries(symbol: string, range: TimeRange, now: number): PricePoint[
   }
 }
 
+/** Prices between two instants: 15-minute samples for short spans, daily closes otherwise. */
+function buildBetween(symbol: string, fromMs: number, toMs: number, now: number): PricePoint[] {
+  const to = Math.min(toMs, now);
+  if (!(to > fromMs)) return [];
+  const first = sessionIndexAt(fromMs);
+  const last = sessionIndexAt(to);
+  const points: PricePoint[] = [];
+  const spanDays = (to - fromMs) / DAY_MS;
+  if (spanDays <= 5) {
+    for (let i = first; i <= last; i++) sampleSession(symbol, i, 15, to, points);
+    return points.filter((p) => p.t >= fromMs - MINUTE_MS && p.t <= to);
+  }
+  const closes = closesFor(symbol, last);
+  for (let i = first; i <= last; i++) {
+    const t = sessionClose(sessionOpens[i]);
+    if (t < fromMs) continue;
+    const isLast = i === last && t > to;
+    points.push({ t: isLast ? to : t, price: round4(isLast ? priceAt(symbol, to) : closes[i]) });
+  }
+  return points;
+}
+
 export class MockMarketDataProvider implements MarketDataProvider {
   readonly id = "mock";
   readonly dataLabel = "modeled history";
@@ -321,6 +343,10 @@ export class MockMarketDataProvider implements MarketDataProvider {
     return buildSeries(symbol.toUpperCase(), range, this.now());
   }
 
+  async getPricesBetween(symbol: string, fromMs: number, toMs: number): Promise<PricePoint[]> {
+    return buildBetween(symbol.toUpperCase(), fromMs, toMs, this.now());
+  }
+
   async getMarketStatus(now: Date = new Date()): Promise<MarketStatus> {
     return getMarketStatusAt(now.getTime());
   }
@@ -336,4 +362,4 @@ export class MockMarketDataProvider implements MarketDataProvider {
 }
 
 /** Test hook: quote and series for an explicit instant. */
-export const __mockInternals = { buildQuote, buildSeries, priceAt };
+export const __mockInternals = { buildQuote, buildSeries, buildBetween, priceAt };

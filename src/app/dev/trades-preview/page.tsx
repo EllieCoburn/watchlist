@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
 import { TradeDetail } from "@/components/trades/trade-detail";
+import { TradePriceChart } from "@/components/trades/trade-price-chart";
 import { TradeFilters } from "@/components/trades/trade-filters";
 import { TradeForm } from "@/components/trades/trade-form";
 import { TradeList } from "@/components/trades/trade-list";
@@ -96,7 +97,7 @@ export default async function TradesPreviewPage({
             title="PLTR"
             status={<p className="label-caps">Trades · Palantir Technologies</p>}
           />
-          <TradeDetail trade={base} />
+          <TradeDetail trade={base} chart={<TradePriceChart trade={base} />} />
         </>
       ) : view === "form" ? (
         <>

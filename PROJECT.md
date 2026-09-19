@@ -160,8 +160,9 @@ supabase/
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 NEXT_PUBLIC_SITE_URL=            # used for auth redirect URLs
-MARKET_DATA_PROVIDER=mock        # mock | alpaca | polygon | finnhub (later)
+MARKET_DATA_PROVIDER=mock        # mock | alpaca (polygon / finnhub can be added the same way)
 MARKET_DATA_API_KEY=             # server-only, never NEXT_PUBLIC_
+MARKET_DATA_API_SECRET=          # Alpaca secret key
 ```
 
 ---
@@ -179,7 +180,10 @@ searchSymbols(query): Promise<SymbolMatch[]>
 ```
 
 - `TimeRange = 'live' | '1H' | '1D' | '1W' | '1M' | '1Y'`
-- A `MarketDataProvider` interface is implemented by `providers/mock.ts` (deterministic, seeded so refreshes look alive but stable). Later providers (Alpaca, Polygon/Massive, Finnhub) implement the same interface.
+- A `MarketDataProvider` interface is implemented by `providers/mock.ts` (deterministic: a daily random walk plus an intraday bridge, so refreshes never rewrite history) and `providers/alpaca.ts` (Alpaca Market Data, free IEX feed). Polygon/Massive or Finnhub adapters implement the same interface and are registered in `providers/index.ts`.
+- Live providers are wrapped in `providers/resilient.ts`: any failure falls back to the mock for that call and the data label reads "modeled · live data unavailable" for a minute.
+- `cache.ts` de-duplicates in-flight requests and caches quotes (10s) and series (30s to 1h by range) per server instance to respect provider rate limits.
+- `getPricesBetween(symbol, from, to)` powers the price chart on a trade's detail page.
 - The facade is `server-only`. Client components receive quotes as props from server components, or poll a route handler (`/api/market/quotes?symbols=...`) that calls the facade. Secrets stay on the server.
 - Polling: the Watch page client polls every 10 seconds when the "Live" range is selected and the tab is visible; the status line reads "polling every 10s".
 - `MarketStatus = { state: 'open' | 'closed' | 'pre' | 'after', label: 'MARKET OPEN' | 'MARKET CLOSED · WEEKEND' | ..., nextChangeAt }`, computed from US market hours (America/New_York) in the mock provider; a real provider can return the exchange's own status.
@@ -257,7 +261,7 @@ Money handling: calculations run in floating point but every displayed value pas
 | **3** | Trade simulator, scenario slider, finance utilities + tests, save scenarios, convert to planned trade | All calcs tested; simulator is beginner-readable |
 | **4** | Trade journal: create/edit/delete, list with filters/search/sort, detail page with chart slot | CRUD works; derived metrics correct |
 | **5** | Analytics: metrics, performance chart, ticker breakdowns, outcome breakdown | Plain-language labels; empty state |
-| **6** | Real market-data provider (Alpaca / Polygon / Finnhub) behind the same interface, server route for quotes, historical ranges | Switch via env var; UI unchanged |
+| **6** | Alpaca adapter behind the same interface, TTL cache, resilient fallback, date-range history, trade price chart | Switch via env var; UI unchanged |
 | **7** | Accessibility pass, mobile polish, loading / error / empty states, performance | Lighthouse a11y ≥ 95; no layout shift on data load |
 
 After each phase: `pnpm typecheck && pnpm lint && pnpm test`, fix everything, commit.

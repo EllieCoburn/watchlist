@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
 import { DeleteTradeButton } from "@/components/trades/delete-trade-button";
 import { TradeDetail } from "@/components/trades/trade-detail";
+import { TradePriceChart } from "@/components/trades/trade-price-chart";
 import { ButtonLink } from "@/components/ui/button";
 import { getTrade } from "@/lib/data/trades";
 import { getCurrentUser } from "@/lib/supabase/server";
@@ -38,7 +39,7 @@ export default async function TradePage({ params }: PageProps<"/app/trades/[id]"
           </div>
         }
       />
-      <TradeDetail trade={trade} />
+      <TradeDetail trade={trade} chart={<TradePriceChart trade={trade} />} />
     </div>
   );
 }

@@ -89,19 +89,18 @@ function Prose({ title, text }: { title: string; text: string | null }) {
   );
 }
 
-/** Slot for a price chart over the trade's period. Filled in once live historical data exists. */
+/** Fallback when no price history exists for the trade's period. */
 export function TradeChartSlot({ trade }: { trade: Trade }) {
   return (
     <div className="flex min-h-40 items-center justify-center rounded-[var(--radius-lg)] border border-dashed border-border-strong p-6 text-center">
       <p className="max-w-sm text-sm leading-relaxed text-muted">
-        A price chart for {trade.ticker} over this trade’s period will appear here once historical
-        market data is connected.
+        No price history is available for {trade.ticker} over this trade’s period yet.
       </p>
     </div>
   );
 }
 
-export function TradeDetail({ trade }: { trade: Trade }) {
+export function TradeDetail({ trade, chart }: { trade: Trade; chart?: ReactNode }) {
   const pnl = tradeRealizedPnl(trade);
   const ret = tradeReturnPercent(trade);
   const capital = tradeCapital(trade);
@@ -185,7 +184,7 @@ export function TradeDetail({ trade }: { trade: Trade }) {
           ) : null}
         </section>
 
-        <TradeChartSlot trade={trade} />
+        {chart ?? <TradeChartSlot trade={trade} />}
       </div>
 
       <section

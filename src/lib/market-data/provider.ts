@@ -20,6 +20,14 @@ export function getHistoricalPrices(symbol: string, range: TimeRange): Promise<P
   return getMarketDataProvider().getHistoricalPrices(symbol, range);
 }
 
+export function getPricesBetween(
+  symbol: string,
+  fromMs: number,
+  toMs: number,
+): Promise<PricePoint[]> {
+  return getMarketDataProvider().getPricesBetween(symbol, fromMs, toMs);
+}
+
 export function getMarketStatus(): Promise<MarketStatus> {
   return getMarketDataProvider().getMarketStatus();
 }

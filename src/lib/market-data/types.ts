@@ -53,6 +53,8 @@ export interface MarketDataProvider {
   getQuote(symbol: string): Promise<Quote>;
   getQuotes(symbols: string[]): Promise<Quote[]>;
   getHistoricalPrices(symbol: string, range: TimeRange): Promise<PricePoint[]>;
+  /** Prices between two instants (epoch ms), used for a trade's chart. Resolution is up to the provider. */
+  getPricesBetween(symbol: string, fromMs: number, toMs: number): Promise<PricePoint[]>;
   getMarketStatus(now?: Date): Promise<MarketStatus>;
   searchSymbols(query: string): Promise<SymbolMatch[]>;
   /** Company name for a symbol, if the provider knows it. */

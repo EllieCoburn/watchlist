@@ -96,3 +96,23 @@ describe("MockMarketDataProvider API", () => {
     expect(status.label).toBe("Market closed · Weekend");
   });
 });
+
+describe("mock provider: prices between two instants", () => {
+  const { buildBetween } = __mockInternals;
+
+  it("samples intraday for short spans and daily closes for long spans", () => {
+    const short = buildBetween("AAPL", edt(2026, 9, 17, 9, 30), edt(2026, 9, 18, 16), SATURDAY);
+    expect(short.length).toBeGreaterThan(20);
+    expect(short[0].t).toBeGreaterThanOrEqual(edt(2026, 9, 17, 9, 29));
+    expect(short[short.length - 1].t).toBeLessThanOrEqual(edt(2026, 9, 18, 16));
+
+    const long = buildBetween("AAPL", edt(2026, 8, 1, 12), edt(2026, 9, 18, 16), SATURDAY);
+    expect(long.length).toBeGreaterThan(25);
+    expect(long.length).toBeLessThan(40);
+    for (let i = 1; i < long.length; i++) expect(long[i].t).toBeGreaterThan(long[i - 1].t);
+  });
+
+  it("returns nothing for an empty or inverted span", () => {
+    expect(buildBetween("AAPL", SATURDAY, SATURDAY - 1, SATURDAY)).toEqual([]);
+  });
+});
