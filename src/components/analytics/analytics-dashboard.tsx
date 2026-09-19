@@ -7,12 +7,7 @@ import {
   tickerStats,
   worstTickers,
 } from "@/lib/finance/analytics";
-import {
-  formatMoney,
-  formatPercent,
-  formatSignedMoney,
-  formatSignedPercent,
-} from "@/lib/finance/money";
+import { formatPercent, formatSignedMoney, formatSignedPercent } from "@/lib/finance/money";
 import type { Trade } from "@/lib/finance/trades";
 import { AnalyticsMetric } from "./analytics-metric";
 import { OutcomeBreakdown } from "./outcome-breakdown";
