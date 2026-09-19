@@ -104,6 +104,17 @@ Saved simulator scenarios.
 | `created_at` | `timestamptz` | |
 | `updated_at` | `timestamptz` | |
 
+### `price_ticks` (migration 0003)
+Shared, public market data: one recorded quote per symbol per minute, written by the server while it serves quotes. Lets market-data plans without history (Finnhub free) build real intraday history over time.
+
+| Column | Type | Notes |
+|---|---|---|
+| `symbol` | `text` | uppercase, PK with `t` |
+| `t` | `timestamptz` | minute bucket |
+| `price` | `numeric(14,4)` | > 0 |
+
+RLS: any authenticated user may select; inserts must carry a timestamp within the last 10 minutes. A trigger prunes rows older than 400 days.
+
 **Derived, never stored:** realized gain/loss, gain/loss %, holding duration, planned risk, planned reward, risk/reward ratio. Computed in `src/lib/finance/`.
 
 Indexes: `trades (user_id, status)`, `trades (user_id, entry_date desc)`, `watchlist_items (watchlist_id, position)`.
@@ -159,6 +170,7 @@ create policy "<table>: owner delete" on public.<table>
 supabase/migrations/
   0001_initial_schema.sql      # extensions, enum, tables, indexes, triggers
   0002_rls_policies.sql        # enable RLS + all policies
+  0003_price_ticks.sql         # shared recorded quotes for intraday history
 ```
 
 Type generation (after applying): `supabase gen types typescript --project-id <id> > src/lib/supabase/types.ts`. A hand-written `types.ts` is committed so the project compiles before a Supabase project exists.

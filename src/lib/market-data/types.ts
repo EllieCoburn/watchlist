@@ -24,6 +24,11 @@ export type PricePoint = {
   price: number;
 };
 
+/** Where a series came from. "modeled" is synthetic; the others are real market prices. */
+export type SeriesSource = "market" | "recorded" | "modeled";
+
+export type PriceSeries = { points: PricePoint[]; source: SeriesSource };
+
 export type MarketState =
   "open" | "closed-weekend" | "closed-holiday" | "pre-market" | "after-hours";
 
@@ -54,7 +59,7 @@ export interface MarketDataProvider {
   readonly historyModeled: boolean;
   getQuote(symbol: string): Promise<Quote>;
   getQuotes(symbols: string[]): Promise<Quote[]>;
-  getHistoricalPrices(symbol: string, range: TimeRange): Promise<PricePoint[]>;
+  getHistoricalPrices(symbol: string, range: TimeRange): Promise<PriceSeries>;
   /** Prices between two instants (epoch ms), used for a trade's chart. Resolution is up to the provider. */
   getPricesBetween(symbol: string, fromMs: number, toMs: number): Promise<PricePoint[]>;
   getMarketStatus(now?: Date): Promise<MarketStatus>;

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { supabaseHistoryStore } from "@/lib/data/price-ticks";
 import { getWatchSnapshot } from "@/lib/market-data/provider";
 import { normalizeTicker } from "@/lib/market-data/symbols";
 import { isTimeRange } from "@/lib/market-data/types";
@@ -25,6 +26,10 @@ export async function GET(request: NextRequest) {
     .filter((s): s is string => Boolean(s))
     .slice(0, MAX_SYMBOLS);
 
-  const snapshot = await getWatchSnapshot(symbols, range);
+  const snapshot = await getWatchSnapshot(
+    symbols,
+    range,
+    user ? supabaseHistoryStore() : undefined,
+  );
   return NextResponse.json(snapshot, { headers: { "Cache-Control": "no-store" } });
 }

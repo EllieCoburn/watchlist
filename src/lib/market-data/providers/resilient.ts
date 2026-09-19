@@ -2,6 +2,7 @@ import type {
   MarketDataProvider,
   MarketStatus,
   PricePoint,
+  PriceSeries,
   Quote,
   SymbolMatch,
   TimeRange,
@@ -56,7 +57,7 @@ export class ResilientProvider implements MarketDataProvider {
   getQuotes(symbols: string[]): Promise<Quote[]> {
     return this.attempt("getQuotes", (p) => p.getQuotes(symbols));
   }
-  getHistoricalPrices(symbol: string, range: TimeRange): Promise<PricePoint[]> {
+  getHistoricalPrices(symbol: string, range: TimeRange): Promise<PriceSeries> {
     return this.attempt("getHistoricalPrices", (p) => p.getHistoricalPrices(symbol, range));
   }
   getPricesBetween(symbol: string, fromMs: number, toMs: number): Promise<PricePoint[]> {

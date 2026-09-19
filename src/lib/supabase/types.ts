@@ -45,6 +45,12 @@ export type TradeScenarioRow = {
   note: string | null;
 } & Timestamps;
 
+export type PriceTickRow = {
+  symbol: string;
+  t: string;
+  price: string;
+};
+
 export type TradeRow = {
   id: string;
   user_id: string;
@@ -100,6 +106,7 @@ export type Database = {
           "id" | "target_price" | "stop_price" | "note" | "created_at" | "updated_at"
         >
       >;
+      price_ticks: Table<PriceTickRow, PriceTickRow>;
       trades: Table<
         TradeRow,
         Optional<

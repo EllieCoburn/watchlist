@@ -27,6 +27,7 @@ Next.js 16 (App Router, TypeScript), Tailwind CSS v4, Supabase (Auth, Postgres, 
 
    - `supabase/migrations/0001_initial_schema.sql`
    - `supabase/migrations/0002_rls_policies.sql`
+   - `supabase/migrations/0003_price_ticks.sql`
 
 3. In Supabase Auth settings enable the Email provider, set the Site URL, and add
    `http://localhost:3000/auth/callback` (and your production `/auth/callback`) to Redirect URLs.
@@ -45,8 +46,10 @@ The UI talks only to `src/lib/market-data/provider.ts`. By default `MARKET_DATA_
 deterministic modeled prices with no keys. Two live adapters are included:
 
 ```
-# Finnhub: real-time quotes. Free tier is 60 calls/min with no historical candles,
-# so sparklines use modeled history re-anchored to the real price.
+# Finnhub: real-time quotes. The free tier has no historical candles, so the app fills in:
+#   1W / 1M / 1Y from free end-of-day closes (Stooq, no key), and
+#   Live / 1H / 1D from quotes it records into the price_ticks table as people use the app.
+# Until enough recorded history exists, those ranges show today's figures and say so.
 MARKET_DATA_PROVIDER=finnhub
 MARKET_DATA_API_KEY=<Finnhub token>
 

@@ -2,7 +2,14 @@ import "server-only";
 
 import { getMarketDataProvider } from "./providers";
 import { alignSeriesToQuote, computeRangeStats, type RangeStats } from "./range-stats";
-import type { MarketStatus, PricePoint, Quote, SymbolMatch, TimeRange } from "./types";
+import type {
+  MarketStatus,
+  PricePoint,
+  Quote,
+  SeriesSource,
+  SymbolMatch,
+  TimeRange,
+} from "./types";
 
 /**
  * The only market-data entry point the rest of the app uses. Server-only so provider
@@ -18,7 +25,34 @@ export function getQuotes(symbols: string[]): Promise<Quote[]> {
 }
 
 export function getHistoricalPrices(symbol: string, range: TimeRange): Promise<PricePoint[]> {
-  return getMarketDataProvider().getHistoricalPrices(symbol, range);
+  return getMarketDataProvider()
+    .getHistoricalPrices(symbol, range)
+    .then((s) => s.points);
+}
+
+/**
+ * Optional store of recorded quotes. When the provider has no real intraday history, the
+ * facade records each quote it serves and reads them back to build real Live / 1H / 1D series.
+ */
+export type PriceHistoryStore = {
+  recordTicks(quotes: Quote[]): Promise<void>;
+  getTicks(symbol: string, fromMs: number, toMs: number): Promise<PricePoint[]>;
+};
+
+const MINUTE_MS = 60_000;
+
+/** Window and minimum coverage before recorded ticks replace a modeled intraday series. */
+function tickWindow(range: TimeRange, now: number): { from: number; minSpanMs: number } | null {
+  switch (range) {
+    case "live":
+      return { from: now - 10 * MINUTE_MS, minSpanMs: 3 * MINUTE_MS };
+    case "1H":
+      return { from: now - 60 * MINUTE_MS, minSpanMs: 15 * MINUTE_MS };
+    case "1D":
+      return { from: now - 24 * 60 * MINUTE_MS, minSpanMs: 30 * MINUTE_MS };
+    default:
+      return null;
+  }
 }
 
 export function getPricesBetween(
@@ -48,19 +82,20 @@ export function getDataLabel(): string {
 export type WatchSnapshot = {
   quotes: Record<string, Quote>;
   series: Record<string, number[]>;
+  /** Where each symbol's series came from. */
+  seriesSource: Record<string, SeriesSource>;
   /** Change and low/high for the requested range, per symbol. */
   rangeStats: Record<string, RangeStats>;
   range: TimeRange;
   status: MarketStatus;
   dataLabel: string;
-  /** True when the series is modeled rather than market data. */
-  historyModeled: boolean;
+  /** True when quotes are real market prices (any provider except the mock). */
+  quotesLive: boolean;
   /**
-   * True when real quotes sit on top of modeled history (e.g. Finnhub free tier). Range
-   * figures beyond today would then mix real and modeled numbers, so the cards keep today's
-   * change and low/high for every range and say so.
+   * Symbols whose range figures fall back to today's numbers because real quotes sit on
+   * modeled history for the selected range. Empty for live / 1D and for the mock provider.
    */
-  rangeFiguresUnavailable: boolean;
+  todayOnly: string[];
   asOf: number;
 };
 
@@ -68,34 +103,61 @@ export type WatchSnapshot = {
 export async function getWatchSnapshot(
   symbols: string[],
   range: TimeRange,
+  history?: PriceHistoryStore,
 ): Promise<WatchSnapshot> {
   const unique = Array.from(new Set(symbols.map((s) => s.toUpperCase())));
   const provider = getMarketDataProvider();
+  const now = Date.now();
   const [quotes, status, seriesList] = await Promise.all([
     unique.length ? provider.getQuotes(unique) : Promise.resolve([]),
     provider.getMarketStatus(),
     Promise.all(unique.map((s) => provider.getHistoricalPrices(s, range))),
   ]);
+  const quotesLive = provider.id !== "mock";
+  if (history && quotesLive && quotes.length) void history.recordTicks(quotes);
+
   const quoteMap: Record<string, Quote> = {};
   for (const q of quotes) quoteMap[q.symbol] = q;
-  const rangeFiguresUnavailable = provider.historyModeled && provider.id !== "mock";
   const series: Record<string, number[]> = {};
+  const seriesSource: Record<string, SeriesSource> = {};
   const rangeStats: Record<string, RangeStats> = {};
-  unique.forEach((s, i) => {
-    const q = quoteMap[s];
-    const points = q ? alignSeriesToQuote(seriesList[i], q) : seriesList[i];
-    series[s] = points.map((p) => p.price);
-    if (q) rangeStats[s] = computeRangeStats(q, points, rangeFiguresUnavailable ? "1D" : range);
-  });
+  const todayOnly: string[] = [];
+  const window = tickWindow(range, now);
+
+  await Promise.all(
+    unique.map(async (s, i) => {
+      const q = quoteMap[s];
+      let { points, source } = seriesList[i];
+
+      // Replace a modeled intraday series with recorded real ticks once enough exist.
+      if (source === "modeled" && quotesLive && history && window) {
+        const ticks = await history.getTicks(s, window.from, now);
+        if (ticks.length > 1 && ticks[ticks.length - 1].t - ticks[0].t >= window.minSpanMs) {
+          points = ticks;
+          source = "recorded";
+        }
+      }
+
+      if (q) points = alignSeriesToQuote(points, q);
+      series[s] = points.map((p) => p.price);
+      seriesSource[s] = source;
+      if (!q) return;
+      const mixed = quotesLive && source === "modeled" && range !== "live" && range !== "1D";
+      if (mixed) todayOnly.push(s);
+      rangeStats[s] = computeRangeStats(q, points, mixed ? "1D" : range);
+    }),
+  );
+
   return {
     quotes: quoteMap,
     series,
+    seriesSource,
     rangeStats,
     range,
     status,
     dataLabel: provider.dataLabel,
-    historyModeled: provider.historyModeled,
-    rangeFiguresUnavailable,
-    asOf: Date.now(),
+    quotesLive,
+    todayOnly,
+    asOf: now,
   };
 }

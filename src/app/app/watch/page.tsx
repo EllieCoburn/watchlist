@@ -9,6 +9,7 @@ import {
   type Watchlist,
   type WatchlistItem,
 } from "@/lib/data/watchlists";
+import { supabaseHistoryStore } from "@/lib/data/price-ticks";
 import { getWatchSnapshot } from "@/lib/market-data/provider";
 import { getCurrentUser } from "@/lib/supabase/server";
 
@@ -49,6 +50,7 @@ export default async function WatchPage({ searchParams }: PageProps<"/app/watch"
   const snapshot = await getWatchSnapshot(
     items.map((i) => i.ticker),
     "1D",
+    supabaseHistoryStore(),
   );
 
   return (

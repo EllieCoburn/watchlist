@@ -6,11 +6,13 @@ import {
   sessionClose,
 } from "../market-hours";
 import { RateBudget } from "../rate-limit";
+import { fetchDailyCloses } from "../sources/stooq";
 import { findSymbol, searchDirectory } from "../symbols";
 import type {
   MarketDataProvider,
   MarketStatus,
   PricePoint,
+  PriceSeries,
   Quote,
   SymbolMatch,
   TimeRange,
@@ -208,7 +210,20 @@ export class FinnhubMarketDataProvider implements MarketDataProvider {
     }
   }
 
-  async getHistoricalPrices(symbol: string, range: TimeRange): Promise<PricePoint[]> {
+  /** Real daily closes from the free end-of-day source, or null when unavailable. */
+  private async dailyCloses(sym: string): Promise<PricePoint[] | null> {
+    try {
+      return await fetchDailyCloses(sym);
+    } catch (err) {
+      console.warn(
+        "[market-data] daily history unavailable:",
+        err instanceof Error ? err.message : err,
+      );
+      return null;
+    }
+  }
+
+  async getHistoricalPrices(symbol: string, range: TimeRange): Promise<PriceSeries> {
     const sym = symbol.toUpperCase();
     const ttl =
       range === "live" || range === "1H"
@@ -217,12 +232,30 @@ export class FinnhubMarketDataProvider implements MarketDataProvider {
           ? 5 * MINUTE_MS
           : 60 * MINUTE_MS;
     return cached(`finnhub:series:${sym}:${range}`, ttl, async () => {
-      const w = rangeWindow(range, Date.now());
+      const now = Date.now();
+      const w = rangeWindow(range, now);
+
+      // 1. Finnhub candles (paid plans).
       const real = await this.candles(sym, w.resolution, w.from, w.to);
-      if (real && real.length > 1) return real;
+      if (real && real.length > 1) return { points: real, source: "market" as const };
+
+      // 2. Real daily closes for the day-based ranges.
+      if (range === "1W" || range === "1M" || range === "1Y") {
+        const daily = await this.dailyCloses(sym);
+        if (daily) {
+          const count = range === "1W" ? 5 : range === "1M" ? 22 : 252;
+          const points = daily.filter((p) => p.t <= now).slice(-count);
+          if (points.length > 1) return { points, source: "market" as const };
+        }
+      }
+
+      // 3. Modeled shape anchored to the real price. The caller may replace this with recorded ticks.
       const modeled = await this.mock.getHistoricalPrices(sym, range);
       const anchor = this.lastQuotes.get(sym)?.price;
-      return anchor ? reanchor(modeled, anchor) : modeled;
+      return {
+        points: anchor ? reanchor(modeled.points, anchor) : modeled.points,
+        source: "modeled" as const,
+      };
     });
   }
 
@@ -235,6 +268,11 @@ export class FinnhubMarketDataProvider implements MarketDataProvider {
     return cached(`finnhub:between:${sym}:${fromMs}:${to}`, 60 * MINUTE_MS, async () => {
       const real = await this.candles(sym, resolution, fromMs, to);
       if (real && real.length > 1) return real;
+      if (days > 2) {
+        const daily = await this.dailyCloses(sym);
+        const points = daily?.filter((p) => p.t >= fromMs && p.t <= to) ?? [];
+        if (points.length > 1) return points;
+      }
       return this.mock.getPricesBetween(sym, fromMs, to);
     });
   }

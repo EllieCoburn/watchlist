@@ -10,6 +10,7 @@ import type {
   MarketDataProvider,
   MarketStatus,
   PricePoint,
+  PriceSeries,
   Quote,
   SymbolMatch,
   TimeRange,
@@ -195,7 +196,7 @@ export class AlpacaMarketDataProvider implements MarketDataProvider {
     return points;
   }
 
-  async getHistoricalPrices(symbol: string, range: TimeRange): Promise<PricePoint[]> {
+  async getHistoricalPrices(symbol: string, range: TimeRange): Promise<PriceSeries> {
     const sym = symbol.toUpperCase();
     const ttl =
       range === "live" || range === "1H"
@@ -205,7 +206,10 @@ export class AlpacaMarketDataProvider implements MarketDataProvider {
           : 60 * MINUTE_MS;
     return cached(`alpaca:series:${sym}:${range}`, ttl, async () => {
       const w = rangeWindow(range, Date.now());
-      return this.bars(sym, w.timeframe, w.start, w.end);
+      return {
+        points: await this.bars(sym, w.timeframe, w.start, w.end),
+        source: "market" as const,
+      };
     });
   }
 

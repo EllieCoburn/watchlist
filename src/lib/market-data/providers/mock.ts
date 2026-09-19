@@ -11,6 +11,7 @@ import type {
   MarketDataProvider,
   MarketStatus,
   PricePoint,
+  PriceSeries,
   Quote,
   SymbolMatch,
   TimeRange,
@@ -340,8 +341,8 @@ export class MockMarketDataProvider implements MarketDataProvider {
     return symbols.map((s) => buildQuote(s.toUpperCase(), now));
   }
 
-  async getHistoricalPrices(symbol: string, range: TimeRange): Promise<PricePoint[]> {
-    return buildSeries(symbol.toUpperCase(), range, this.now());
+  async getHistoricalPrices(symbol: string, range: TimeRange): Promise<PriceSeries> {
+    return { points: buildSeries(symbol.toUpperCase(), range, this.now()), source: "modeled" };
   }
 
   async getPricesBetween(symbol: string, fromMs: number, toMs: number): Promise<PricePoint[]> {

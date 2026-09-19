@@ -105,12 +105,12 @@ export function WatchDashboard({
   const slotCount = (filledRows + extraRows) * COLUMNS;
   const emptySlots = Math.max(0, slotCount - visibleItems.length);
 
-  // Figures follow the selected range unless the provider cannot supply history.
-  const figuresRange = snapshot.rangeFiguresUnavailable ? "1D" : range;
-  const caption = rangeCaption(figuresRange);
+  // Figures follow the selected range; symbols without real history for it fall back to today.
+  const caption = rangeCaption(range);
+  const todayOnly = snapshot.todayOnly.filter((s) => visibleItems.some((i) => i.ticker === s));
   const rangeNote =
-    snapshot.rangeFiguresUnavailable && range !== "1D" && range !== "live"
-      ? "This data plan has no price history, so change and low/high show today. The sparkline shape is modeled."
+    todayOnly.length > 0
+      ? `Real ${caption} history is still building for ${todayOnly.join(", ")}: showing today's change and low/high with a modeled sparkline.`
       : null;
 
   const cards: StockCardData[] = visibleItems.map((item) => {
