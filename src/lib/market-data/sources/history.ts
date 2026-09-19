@@ -18,19 +18,26 @@ export async function fetchFreeHistory(
   const dayBased = range === "1W" || range === "1M" || range === "1Y";
 
   if (dayBased) {
-    try {
-      const daily = await fetchDailyCloses(symbol);
-      const count = range === "1W" ? 5 : range === "1M" ? 22 : 252;
-      const points = daily.filter((p) => p.t <= now).slice(-count);
-      attempts.push({ source: "stooq", ok: points.length > 1, points: points.length });
-      if (points.length > 1) return { points, attempts };
-    } catch (err) {
-      attempts.push({
-        source: "stooq",
-        ok: false,
-        points: 0,
-        error: err instanceof Error ? err.message : String(err),
-      });
+    const count = range === "1W" ? 5 : range === "1M" ? 22 : 252;
+    const dailySources: { name: string; load: () => Promise<PricePoint[]> }[] = [];
+    if (isPolygonConfigured())
+      dailySources.push({ name: "polygon", load: () => fetchPolygonDaily(symbol) });
+    dailySources.push({ name: "stooq", load: () => fetchDailyCloses(symbol) });
+
+    for (const src of dailySources) {
+      try {
+        const daily = await src.load();
+        const points = daily.filter((p) => p.t <= now).slice(-count);
+        attempts.push({ source: src.name, ok: points.length > 1, points: points.length });
+        if (points.length > 1) return { points, attempts };
+      } catch (err) {
+        attempts.push({
+          source: src.name,
+          ok: false,
+          points: 0,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
   }
 
