@@ -1,5 +1,6 @@
 import type { MarketDataProvider } from "../types";
 import { AlpacaMarketDataProvider } from "./alpaca";
+import { FinnhubMarketDataProvider } from "./finnhub";
 import { MockMarketDataProvider } from "./mock";
 import { ResilientProvider } from "./resilient";
 
@@ -29,6 +30,18 @@ export function getMarketDataProvider(): MarketDataProvider {
         instance = mock;
       } else {
         instance = new ResilientProvider(new AlpacaMarketDataProvider(key, secret), mock);
+      }
+      break;
+    }
+    case "finnhub": {
+      const key = process.env.MARKET_DATA_API_KEY;
+      if (!key) {
+        console.warn(
+          "MARKET_DATA_PROVIDER=finnhub but MARKET_DATA_API_KEY is missing; using mock.",
+        );
+        instance = mock;
+      } else {
+        instance = new ResilientProvider(new FinnhubMarketDataProvider(key), mock);
       }
       break;
     }

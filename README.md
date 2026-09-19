@@ -42,9 +42,15 @@ Next.js 16 (App Router, TypeScript), Tailwind CSS v4, Supabase (Auth, Postgres, 
 ## Market data
 
 The UI talks only to `src/lib/market-data/provider.ts`. By default `MARKET_DATA_PROVIDER=mock` serves
-deterministic modeled prices with no keys. To use live data:
+deterministic modeled prices with no keys. Two live adapters are included:
 
 ```
+# Finnhub: real-time quotes. Free tier is 60 calls/min with no historical candles,
+# so sparklines use modeled history re-anchored to the real price.
+MARKET_DATA_PROVIDER=finnhub
+MARKET_DATA_API_KEY=<Finnhub token>
+
+# Alpaca: batch quotes and real bars on the free IEX feed. Scales far better.
 MARKET_DATA_PROVIDER=alpaca
 MARKET_DATA_API_KEY=<Alpaca key id>
 MARKET_DATA_API_SECRET=<Alpaca secret>
