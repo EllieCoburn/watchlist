@@ -17,6 +17,8 @@ export type AuthState = {
   error?: string;
   success?: string;
   fieldErrors?: FieldErrors<"email" | "password" | "confirm" | "displayName">;
+  /** Set when the email exists but has not been confirmed, so the form can offer a resend. */
+  unconfirmedEmail?: string;
 };
 
 const NOT_CONFIGURED: AuthState = {
@@ -49,9 +51,31 @@ export async function logIn(_prev: AuthState, formData: FormData): Promise<AuthS
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email: email!, password });
-  if (error) return { error: friendlyAuthError(error.message) };
+  if (error) {
+    const unconfirmed = error.message.toLowerCase().includes("email not confirmed");
+    return {
+      error: friendlyAuthError(error.message),
+      unconfirmedEmail: unconfirmed ? email! : undefined,
+    };
+  }
 
   redirect(safeNextPath(formData.get("next")));
+}
+
+/** Re-sends the signup confirmation email for an unconfirmed account. */
+export async function resendConfirmation(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  if (!isSupabaseConfigured()) return NOT_CONFIGURED;
+  const email = validateEmail(formData.get("email"));
+  if (!email) return { error: "Enter a valid email address." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: { emailRedirectTo: `${getSiteUrl()}/auth/callback?next=/app` },
+  });
+  if (error) return { error: friendlyAuthError(error.message) };
+  return { success: "Confirmation email sent. Check your inbox and spam folder." };
 }
 
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {
