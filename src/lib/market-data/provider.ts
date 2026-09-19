@@ -30,6 +30,50 @@ export function getHistoricalPrices(symbol: string, range: TimeRange): Promise<P
     .then((s) => s.points);
 }
 
+export function getPricesBetween(
+  symbol: string,
+  fromMs: number,
+  toMs: number,
+): Promise<PricePoint[]> {
+  return getMarketDataProvider().getPricesBetween(symbol, fromMs, toMs);
+}
+
+export function getMarketStatus(): Promise<MarketStatus> {
+  return getMarketDataProvider().getMarketStatus();
+}
+
+export function searchSymbols(query: string): Promise<SymbolMatch[]> {
+  return getMarketDataProvider().searchSymbols(query);
+}
+
+export function lookupSymbol(symbol: string): Promise<SymbolMatch | null> {
+  return getMarketDataProvider().lookupSymbol(symbol);
+}
+
+export function getDataLabel(): string {
+  return getMarketDataProvider().dataLabel;
+}
+
+export type WatchSnapshot = {
+  quotes: Record<string, Quote>;
+  series: Record<string, number[]>;
+  /** Where each symbol's series came from. */
+  seriesSource: Record<string, SeriesSource>;
+  /** Change and low/high for the requested range, per symbol. */
+  rangeStats: Record<string, RangeStats>;
+  range: TimeRange;
+  status: MarketStatus;
+  dataLabel: string;
+  /** True when quotes are real market prices (any provider except the mock). */
+  quotesLive: boolean;
+  /**
+   * Symbols whose range figures fall back to today's numbers because real quotes sit on
+   * modeled history for the selected range. Empty for live / 1D and for the mock provider.
+   */
+  todayOnly: string[];
+  asOf: number;
+};
+
 /**
  * Optional store of recorded quotes. When the provider has no real intraday history, the
  * facade records each quote it serves and reads them back to build real Live / 1H / 1D series.
