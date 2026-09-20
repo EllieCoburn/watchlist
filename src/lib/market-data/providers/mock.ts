@@ -8,6 +8,8 @@ import {
 } from "../market-hours";
 import { findSymbol, searchDirectory } from "../symbols";
 import type {
+  DailyBar,
+  DailyBars,
   MarketDataProvider,
   MarketStatus,
   PricePoint,
@@ -323,6 +325,35 @@ function buildBetween(symbol: string, fromMs: number, toMs: number, now: number)
   return points;
 }
 
+/** Modeled daily OHLC bars for the `count` most recent complete sessions. */
+function buildDailyBars(symbol: string, count: number, now: number): DailyBar[] {
+  const latest = sessionIndexAt(now);
+  const complete = now >= sessionClose(sessionOpens[latest]) ? latest : latest - 1;
+  const first = Math.max(0, complete - count + 1);
+  const closes = closesFor(symbol, complete);
+  const bars: DailyBar[] = [];
+  for (let i = first; i <= complete; i++) {
+    let high = -Infinity;
+    let low = Infinity;
+    for (let m = 0; m <= SESSION_LENGTH_MINUTES; m += 5) {
+      const p = priceInSession(symbol, i, m);
+      if (p > high) high = p;
+      if (p < low) low = p;
+    }
+    const open = priceInSession(symbol, i, 0);
+    const close = closes[i];
+    const day = new Date(sessionOpens[i]);
+    bars.push({
+      t: Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate()),
+      open: round4(open),
+      high: round4(Math.max(high, open, close)),
+      low: round4(Math.min(low, open, close)),
+      close: round4(close),
+    });
+  }
+  return bars;
+}
+
 export class MockMarketDataProvider implements MarketDataProvider {
   readonly id = "mock";
   readonly dataLabel = "modeled prices · not live";
@@ -349,6 +380,14 @@ export class MockMarketDataProvider implements MarketDataProvider {
     return buildBetween(symbol.toUpperCase(), fromMs, toMs, this.now());
   }
 
+  async getDailyBars(symbol: string, count: number): Promise<DailyBars> {
+    return { bars: buildDailyBars(symbol.toUpperCase(), count, this.now()), source: "modeled" };
+  }
+
+  async getNextEarningsDate(): Promise<string | null> {
+    return null;
+  }
+
   async getMarketStatus(now: Date = new Date()): Promise<MarketStatus> {
     return getMarketStatusAt(now.getTime());
   }
@@ -364,4 +403,4 @@ export class MockMarketDataProvider implements MarketDataProvider {
 }
 
 /** Test hook: quote and series for an explicit instant. */
-export const __mockInternals = { buildQuote, buildSeries, buildBetween, priceAt };
+export const __mockInternals = { buildQuote, buildSeries, buildBetween, buildDailyBars, priceAt };

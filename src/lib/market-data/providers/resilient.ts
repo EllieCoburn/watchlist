@@ -1,4 +1,5 @@
 import type {
+  DailyBars,
   MarketDataProvider,
   MarketStatus,
   PricePoint,
@@ -62,6 +63,13 @@ export class ResilientProvider implements MarketDataProvider {
   }
   getPricesBetween(symbol: string, fromMs: number, toMs: number): Promise<PricePoint[]> {
     return this.attempt("getPricesBetween", (p) => p.getPricesBetween(symbol, fromMs, toMs));
+  }
+  /** Daily bars feed the simulation engine, which must never see modeled data: no fallback here. */
+  getDailyBars(symbol: string, count: number): Promise<DailyBars> {
+    return this.primary.getDailyBars(symbol, count);
+  }
+  getNextEarningsDate(symbol: string): Promise<string | null> {
+    return this.primary.getNextEarningsDate(symbol).catch(() => null);
   }
   getMarketStatus(now?: Date): Promise<MarketStatus> {
     return this.attempt("getMarketStatus", (p) => p.getMarketStatus(now));

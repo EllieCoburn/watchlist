@@ -1,5 +1,5 @@
 import { cached } from "../cache";
-import type { PricePoint, TimeRange } from "../types";
+import type { DailyBar, PricePoint, TimeRange } from "../types";
 
 /**
  * Yahoo Finance chart endpoint (unofficial, no key). Second-choice history source for
@@ -15,7 +15,13 @@ type YahooChart = {
     result?: {
       timestamp?: number[];
       indicators?: {
-        quote?: { close?: (number | null)[]; low?: (number | null)[]; high?: (number | null)[] }[];
+        quote?: {
+          open?: (number | null)[];
+          close?: (number | null)[];
+          low?: (number | null)[];
+          high?: (number | null)[];
+          volume?: (number | null)[];
+        }[];
       };
     }[];
     error?: { code?: string; description?: string } | null;
@@ -46,6 +52,51 @@ export function parseYahooChart(data: YahooChart): PricePoint[] {
     });
   }
   return points;
+}
+
+export function parseYahooBars(data: YahooChart): DailyBar[] {
+  const result = data.chart?.result?.[0];
+  const ts = result?.timestamp ?? [];
+  const q = result?.indicators?.quote?.[0];
+  if (!q?.close || ts.length === 0) return [];
+  const r = (v: number) => Math.round(v * 10_000) / 10_000;
+  const bars: DailyBar[] = [];
+  for (let i = 0; i < ts.length; i++) {
+    const o = q.open?.[i],
+      h = q.high?.[i],
+      l = q.low?.[i],
+      c = q.close[i];
+    if (o == null || h == null || l == null || c == null || !(o > 0 && h > 0 && l > 0 && c > 0))
+      continue;
+    const day = new Date(ts[i] * 1000);
+    bars.push({
+      t: Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate()),
+      open: r(o),
+      high: r(h),
+      low: r(l),
+      close: r(c),
+      volume: q.volume?.[i] ?? undefined,
+    });
+  }
+  return bars;
+}
+
+export async function fetchYahooDailyBars(symbol: string): Promise<DailyBar[]> {
+  const sym = toYahooSymbol(symbol);
+  return cached(`yahoo:bars:${sym}`, 60 * 60_000, async () => {
+    const url = `${BASE}${encodeURIComponent(sym)}?range=2y&interval=1d&includePrePost=false&events=div%2Csplit`;
+    const res = await fetch(url, {
+      cache: "no-store",
+      headers: { "User-Agent": UA, Accept: "application/json" },
+    });
+    if (!res.ok) throw new Error(`Yahoo ${sym} daily bars failed: ${res.status}`);
+    const data = (await res.json()) as YahooChart;
+    if (data.chart?.error)
+      throw new Error(`Yahoo ${sym}: ${data.chart.error.description ?? data.chart.error.code}`);
+    const bars = parseYahooBars(data);
+    if (bars.length === 0) throw new Error(`Yahoo ${sym}: no data`);
+    return bars;
+  });
 }
 
 /** Yahoo's range/interval pair for each UI range. */

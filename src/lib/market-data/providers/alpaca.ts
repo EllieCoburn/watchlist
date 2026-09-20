@@ -7,6 +7,8 @@ import {
 } from "../market-hours";
 import { findSymbol, searchDirectory } from "../symbols";
 import type {
+  DailyBar,
+  DailyBars,
   MarketDataProvider,
   MarketStatus,
   PricePoint,
@@ -74,6 +76,24 @@ export function mapSnapshotToQuote(
     dayHigh: round4(Math.max(s.dailyBar?.h ?? price, price)),
     asOf: s.latestTrade?.t ? Date.parse(s.latestTrade.t) : now,
   };
+}
+
+export function mapDailyBars(bars: AlpacaBar[] | undefined): DailyBar[] {
+  const r = (v: number) => Math.round(v * 10_000) / 10_000;
+  return (bars ?? [])
+    .filter((b) => b.o > 0 && b.h > 0 && b.l > 0 && b.c > 0)
+    .map((b) => {
+      const day = new Date(b.t);
+      return {
+        t: Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate()),
+        open: r(b.o),
+        high: r(b.h),
+        low: r(b.l),
+        close: r(b.c),
+        volume: b.v,
+      };
+    })
+    .sort((a, b) => a.t - b.t);
 }
 
 export function mapBars(bars: AlpacaBar[] | undefined): PricePoint[] {
@@ -220,6 +240,30 @@ export class AlpacaMarketDataProvider implements MarketDataProvider {
     return cached(`alpaca:between:${sym}:${fromMs}:${to}`, 60 * MINUTE_MS, () =>
       this.bars(sym, timeframeForSpan(to - fromMs), fromMs, to),
     );
+  }
+
+  async getDailyBars(symbol: string, count: number): Promise<DailyBars> {
+    const sym = symbol.toUpperCase();
+    return cached(`alpaca:dailybars:${sym}`, 60 * MINUTE_MS, async () => {
+      const now = Date.now();
+      const data = await this.request<BarsResponse>(DATA_BASE, "/v2/stocks/bars", {
+        symbols: sym,
+        timeframe: "1Day",
+        start: new Date(now - Math.ceil(count * 1.6) * DAY_MS).toISOString(),
+        end: new Date(now).toISOString(),
+        limit: "10000",
+        feed: FEED,
+        sort: "asc",
+        adjustment: "split",
+      });
+      const bars = mapDailyBars(data.bars[sym]).slice(-count);
+      if (bars.length < 2) throw new Error(`Alpaca: no daily bars for ${sym}`);
+      return { bars, source: "market" as const };
+    });
+  }
+
+  async getNextEarningsDate(): Promise<string | null> {
+    return null;
   }
 
   async getMarketStatus(now: Date = new Date()): Promise<MarketStatus> {

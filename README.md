@@ -28,6 +28,7 @@ Next.js 16 (App Router, TypeScript), Tailwind CSS v4, Supabase (Auth, Postgres, 
    - `supabase/migrations/0001_initial_schema.sql`
    - `supabase/migrations/0002_rls_policies.sql`
    - `supabase/migrations/0003_price_ticks.sql`
+   - `supabase/migrations/0004_simulation_runs.sql`
 
 3. In Supabase Auth settings enable the Email provider, set the Site URL, and add
    `http://localhost:3000/auth/callback` (and your production `/auth/callback`) to Redirect URLs.

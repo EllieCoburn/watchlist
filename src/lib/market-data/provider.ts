@@ -3,6 +3,7 @@ import "server-only";
 import { getMarketDataProvider } from "./providers";
 import { alignSeriesToQuote, computeRangeStats, tickWindow, type RangeStats } from "./range-stats";
 import type {
+  DailyBars,
   MarketStatus,
   PricePoint,
   Quote,
@@ -36,6 +37,15 @@ export function getPricesBetween(
   toMs: number,
 ): Promise<PricePoint[]> {
   return getMarketDataProvider().getPricesBetween(symbol, fromMs, toMs);
+}
+
+/** Real daily OHLC bars for the engine. Throws when the active provider has no real history. */
+export function getDailyBars(symbol: string, count: number): Promise<DailyBars> {
+  return getMarketDataProvider().getDailyBars(symbol, count);
+}
+
+export function getNextEarningsDate(symbol: string): Promise<string | null> {
+  return getMarketDataProvider().getNextEarningsDate(symbol);
 }
 
 export function getMarketStatus(): Promise<MarketStatus> {

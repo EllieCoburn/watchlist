@@ -51,6 +51,24 @@ export type PriceTickRow = {
   price: string;
 };
 
+export type SimulationRunRow = {
+  id: string;
+  user_id: string;
+  ticker: string;
+  model_version: string;
+  entry_price: string;
+  target_price: string;
+  stop_price: string;
+  horizon: unknown;
+  shares: string | null;
+  data_source: string;
+  bars_used: number;
+  paths: number;
+  seed: string;
+  result: unknown;
+  created_at: string;
+};
+
 export type TradeRow = {
   id: string;
   user_id: string;
@@ -107,6 +125,10 @@ export type Database = {
         >
       >;
       price_ticks: Table<PriceTickRow, PriceTickRow>;
+      simulation_runs: Table<
+        SimulationRunRow,
+        Optional<SimulationRunRow, "id" | "shares" | "created_at">
+      >;
       trades: Table<
         TradeRow,
         Optional<

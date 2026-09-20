@@ -6,6 +6,7 @@ import { formatMoney, formatShares } from "@/lib/finance/money";
 import { computeScenario, type ScenarioInput } from "@/lib/finance/scenario";
 import { parseOptionalPositiveNumber, parsePositiveNumber } from "@/lib/validation/numbers";
 import type { WatchSnapshot } from "@/lib/market-data/provider";
+import { ProbabilitySimulator } from "./probability-simulator";
 import { ProfitLossDisplay } from "./profit-loss-display";
 import { RiskRewardDisplay } from "./risk-reward-display";
 import { ScenarioActions } from "./scenario-actions";
@@ -168,6 +169,22 @@ export function TradeSimulator({
           />
         </div>
       </div>
+
+      <ProbabilitySimulator
+        ticker={input.ticker}
+        entry={input.entryPrice > 0 ? input.entryPrice : null}
+        target={input.targetPrice}
+        stop={input.stopPrice}
+        shares={result.valid ? result.shares : null}
+        ready={Boolean(
+          input.ticker &&
+          input.entryPrice > 0 &&
+          input.targetPrice != null &&
+          input.stopPrice != null &&
+          input.targetPrice > input.entryPrice &&
+          input.stopPrice < input.entryPrice,
+        )}
+      />
 
       {result.valid ? (
         <ScenarioSlider

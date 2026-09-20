@@ -1,8 +1,13 @@
-import type { PricePoint, TimeRange } from "../types";
+import type { DailyBar, PricePoint, TimeRange } from "../types";
 import { latestSessionOpen, sessionClose } from "../market-hours";
-import { fetchPolygonDaily, fetchPolygonIntraday, isPolygonConfigured } from "./polygon";
-import { fetchDailyCloses } from "./stooq";
-import { fetchYahooChart, yahooParams } from "./yahoo";
+import {
+  fetchPolygonDaily,
+  fetchPolygonDailyBars,
+  fetchPolygonIntraday,
+  isPolygonConfigured,
+} from "./polygon";
+import { fetchDailyCloses, fetchStooqBars } from "./stooq";
+import { fetchYahooChart, fetchYahooDailyBars, yahooParams } from "./yahoo";
 
 export type HistoryAttempt = { source: string; ok: boolean; points: number; error?: string };
 
@@ -85,4 +90,33 @@ export async function fetchFreeHistory(
   }
 
   return { points: [], attempts };
+}
+
+/** Real daily OHLC bars from the first source that answers. Throws when none can. */
+export async function fetchFreeDailyBars(
+  symbol: string,
+): Promise<{ bars: DailyBar[]; source: string; attempts: HistoryAttempt[] }> {
+  const attempts: HistoryAttempt[] = [];
+  const sources: { name: string; load: () => Promise<DailyBar[]> }[] = [];
+  if (isPolygonConfigured())
+    sources.push({ name: "polygon", load: () => fetchPolygonDailyBars(symbol) });
+  sources.push({ name: "stooq", load: () => fetchStooqBars(symbol) });
+  sources.push({ name: "yahoo", load: () => fetchYahooDailyBars(symbol) });
+  for (const src of sources) {
+    try {
+      const bars = await src.load();
+      attempts.push({ source: src.name, ok: bars.length > 1, points: bars.length });
+      if (bars.length > 1) return { bars, source: src.name, attempts };
+    } catch (err) {
+      attempts.push({
+        source: src.name,
+        ok: false,
+        points: 0,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+  throw new Error(
+    `No daily history available for ${symbol}: ${attempts.map((a) => `${a.source} (${a.error ?? "no data"})`).join("; ")}`,
+  );
 }

@@ -1,6 +1,6 @@
 import { cached } from "../cache";
 import { easternWallClock, SESSION_CLOSE_MINUTES } from "../market-hours";
-import type { PricePoint } from "../types";
+import type { DailyBar, PricePoint } from "../types";
 
 /**
  * Free end-of-day closes from Stooq (no key). Used to give Finnhub's free tier real
@@ -43,6 +43,49 @@ export function parseStooqCsv(csv: string): PricePoint[] {
   }
   points.sort((a, b) => a.t - b.t);
   return points;
+}
+
+export function parseStooqBars(csv: string): DailyBar[] {
+  const lines = csv.trim().split(/\r?\n/);
+  if (lines.length < 2 || !lines[0].toLowerCase().startsWith("date")) return [];
+  const r = (v: number) => Math.round(v * 10_000) / 10_000;
+  const bars: DailyBar[] = [];
+  for (const line of lines.slice(1)) {
+    const [date, open, high, low, close, volume] = line.split(",");
+    const [y, m, d] = date.split("-").map(Number);
+    if (!y || !m || !d) continue;
+    const o = Number(open),
+      h = Number(high),
+      l = Number(low),
+      c = Number(close);
+    if (!(o > 0 && h > 0 && l > 0 && c > 0)) continue;
+    bars.push({
+      t: Date.UTC(y, m - 1, d),
+      open: r(o),
+      high: r(h),
+      low: r(l),
+      close: r(c),
+      volume: Number(volume) || undefined,
+    });
+  }
+  bars.sort((a, b) => a.t - b.t);
+  return bars;
+}
+
+export async function fetchStooqBars(symbol: string): Promise<DailyBar[]> {
+  const sym = symbol.toUpperCase();
+  return cached(`stooq:bars:${sym}`, 60 * 60_000, async () => {
+    const url = `${BASE}?s=${encodeURIComponent(toStooqSymbol(sym))}&i=d`;
+    const res = await fetch(url, { cache: "no-store", headers: { Accept: "text/csv" } });
+    if (!res.ok) throw new Error(`Stooq ${sym} failed: ${res.status}`);
+    const text = await res.text();
+    const bars = parseStooqBars(text);
+    if (bars.length === 0)
+      throw new Error(
+        `Stooq ${sym}: ${/exceeded|limit/i.test(text) ? "daily hit limit exceeded" : "no data"}`,
+      );
+    return bars;
+  });
 }
 
 export async function fetchDailyCloses(symbol: string): Promise<PricePoint[]> {

@@ -1,6 +1,6 @@
 import { cached } from "../cache";
 import { RateBudget } from "../rate-limit";
-import type { PricePoint } from "../types";
+import type { DailyBar, PricePoint } from "../types";
 
 /**
  * Polygon.io daily aggregates (free "Basic" plan: end-of-day bars, 2 years of history,
@@ -31,6 +31,37 @@ export function mapPolygonAggs(results: PolygonAgg[] | undefined): PricePoint[] 
       high: a.h > 0 ? r(a.h) : undefined,
     }))
     .sort((a, b) => a.t - b.t);
+}
+
+export function mapPolygonBars(results: PolygonAgg[] | undefined): DailyBar[] {
+  const r = (v: number) => Math.round(v * 10_000) / 10_000;
+  return (results ?? [])
+    .filter((a) => Number.isFinite(a.t) && a.o > 0 && a.h > 0 && a.l > 0 && a.c > 0)
+    .map((a) => ({ t: a.t, open: r(a.o), high: r(a.h), low: r(a.l), close: r(a.c), volume: a.v }))
+    .sort((a, b) => a.t - b.t);
+}
+
+/** About a year of daily OHLC bars, cached for an hour. */
+export async function fetchPolygonDailyBars(symbol: string): Promise<DailyBar[]> {
+  const key = process.env.HISTORY_API_KEY;
+  if (!key) throw new Error("Polygon: HISTORY_API_KEY is not set");
+  const sym = symbol.toUpperCase();
+  return cached(`polygon:bars:${sym}`, 60 * 60_000, async () => {
+    if (!budget.take()) throw new Error("Polygon: request budget spent for this minute");
+    const now = Date.now();
+    const url = `${BASE}/v2/aggs/ticker/${encodeURIComponent(sym)}/range/1/day/${isoDate(now - 400 * DAY_MS)}/${isoDate(now)}?adjusted=true&sort=asc&limit=400`;
+    const res = await fetch(url, {
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${key}`, Accept: "application/json" },
+    });
+    if (!res.ok) throw new Error(`Polygon ${sym} failed: ${res.status}`);
+    const data = (await res.json()) as PolygonAggsResponse;
+    if (data.error || data.status === "ERROR")
+      throw new Error(`Polygon ${sym}: ${data.error ?? data.message ?? "error"}`);
+    const bars = mapPolygonBars(data.results);
+    if (bars.length === 0) throw new Error(`Polygon ${sym}: no data`);
+    return bars;
+  });
 }
 
 function isoDate(ms: number): string {

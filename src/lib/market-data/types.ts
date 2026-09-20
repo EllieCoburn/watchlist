@@ -32,6 +32,18 @@ export type SeriesSource = "market" | "recorded" | "modeled";
 
 export type PriceSeries = { points: PricePoint[]; source: SeriesSource };
 
+/** One trading session's open, high, low and close. `t` is the session date at 00:00 UTC. */
+export type DailyBar = {
+  t: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume?: number;
+};
+
+export type DailyBars = { bars: DailyBar[]; source: SeriesSource };
+
 export type MarketState =
   "open" | "closed-weekend" | "closed-holiday" | "pre-market" | "after-hours";
 
@@ -63,6 +75,13 @@ export interface MarketDataProvider {
   getQuote(symbol: string): Promise<Quote>;
   getQuotes(symbols: string[]): Promise<Quote[]>;
   getHistoricalPrices(symbol: string, range: TimeRange): Promise<PriceSeries>;
+  /**
+   * Up to `count` most recent complete daily bars (oldest first). Used by the simulation
+   * engine, which refuses modeled bars, so a provider without real history must throw.
+   */
+  getDailyBars(symbol: string, count: number): Promise<DailyBars>;
+  /** Next scheduled earnings date (YYYY-MM-DD) if the provider knows it; null when unknown. */
+  getNextEarningsDate(symbol: string): Promise<string | null>;
   /** Prices between two instants (epoch ms), used for a trade's chart. Resolution is up to the provider. */
   getPricesBetween(symbol: string, fromMs: number, toMs: number): Promise<PricePoint[]>;
   getMarketStatus(now?: Date): Promise<MarketStatus>;

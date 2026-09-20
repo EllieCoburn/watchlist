@@ -115,6 +115,9 @@ Shared, public market data: one recorded quote per symbol per minute, written by
 
 RLS: any authenticated user may select; inserts must carry a timestamp within the last 10 minutes. A trigger prunes rows older than 400 days.
 
+### `simulation_runs` (migration 0004)
+Audit trail for the Simulate probability calculator: inputs, data source, bar count, Monte Carlo seed and path count, and the full result JSON, so any displayed probability can be reproduced. Owner-only RLS (select, insert, delete).
+
 **Derived, never stored:** realized gain/loss, gain/loss %, holding duration, planned risk, planned reward, risk/reward ratio. Computed in `src/lib/finance/`.
 
 Indexes: `trades (user_id, status)`, `trades (user_id, entry_date desc)`, `watchlist_items (watchlist_id, position)`.
@@ -171,6 +174,7 @@ supabase/migrations/
   0001_initial_schema.sql      # extensions, enum, tables, indexes, triggers
   0002_rls_policies.sql        # enable RLS + all policies
   0003_price_ticks.sql         # shared recorded quotes for intraday history
+  0004_simulation_runs.sql     # audit trail for probability simulations
 ```
 
 Type generation (after applying): `supabase gen types typescript --project-id <id> > src/lib/supabase/types.ts`. A hand-written `types.ts` is committed so the project compiles before a Supabase project exists.

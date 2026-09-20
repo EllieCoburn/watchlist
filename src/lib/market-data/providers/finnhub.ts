@@ -6,10 +6,12 @@ import {
   sessionClose,
 } from "../market-hours";
 import { RateBudget } from "../rate-limit";
-import { fetchFreeHistory } from "../sources/history";
+import { fetchFreeDailyBars, fetchFreeHistory } from "../sources/history";
 import { fetchDailyCloses } from "../sources/stooq";
 import { findSymbol, searchDirectory } from "../symbols";
 import type {
+  DailyBar,
+  DailyBars,
   MarketDataProvider,
   MarketStatus,
   PricePoint,
@@ -50,7 +52,16 @@ export type FinnhubQuote = {
   pc: number;
   t: number;
 };
-export type FinnhubCandles = { s: "ok" | "no_data"; t?: number[]; c?: number[] };
+export type FinnhubCandles = {
+  s: "ok" | "no_data";
+  t?: number[];
+  o?: number[];
+  h?: number[];
+  l?: number[];
+  c?: number[];
+  v?: number[];
+};
+type FinnhubEarnings = { earningsCalendar?: { date: string; symbol: string }[] };
 type FinnhubSearch = { result?: { symbol: string; description: string; type: string }[] };
 type FinnhubProfile = { name?: string; ticker?: string };
 type FinnhubMarketStatus = { isOpen: boolean; session: string | null; holiday: string | null };
@@ -79,6 +90,29 @@ export function mapQuote(
     dayHigh: round4(Math.max(q.h > 0 ? q.h : q.c, q.c)),
     asOf: q.t > 0 ? q.t * 1000 : now,
   };
+}
+
+export function mapDailyCandles(data: FinnhubCandles): DailyBar[] {
+  if (data.s !== "ok" || !data.t || !data.o || !data.h || !data.l || !data.c) return [];
+  const r = (v: number) => Math.round(v * 10_000) / 10_000;
+  const bars: DailyBar[] = [];
+  for (let i = 0; i < data.t.length; i++) {
+    const o = data.o[i],
+      h = data.h[i],
+      l = data.l[i],
+      c = data.c[i];
+    if (!(o > 0 && h > 0 && l > 0 && c > 0)) continue;
+    const day = new Date(data.t[i] * 1000);
+    bars.push({
+      t: Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate()),
+      open: r(o),
+      high: r(h),
+      low: r(l),
+      close: r(c),
+      volume: data.v?.[i],
+    });
+  }
+  return bars;
 }
 
 export function mapCandles(data: FinnhubCandles): PricePoint[] {
@@ -278,6 +312,54 @@ export class FinnhubMarketDataProvider implements MarketDataProvider {
       }
       return this.mock.getPricesBetween(sym, fromMs, to);
     });
+  }
+
+  async getDailyBars(symbol: string, count: number): Promise<DailyBars> {
+    const sym = symbol.toUpperCase();
+    return cached(`finnhub:dailybars:${sym}`, 60 * MINUTE_MS, async () => {
+      const now = Date.now();
+      // Paid plans: Finnhub's own daily candles.
+      if (!this.candlesUnavailable) {
+        try {
+          const data = await this.request<FinnhubCandles>("/stock/candle", {
+            symbol: sym,
+            resolution: "D",
+            from: String(Math.floor((now - Math.ceil(count * 1.6) * DAY_MS) / 1000)),
+            to: String(Math.floor(now / 1000)),
+          });
+          const bars = mapDailyCandles(data).slice(-count);
+          if (bars.length > 1) return { bars, source: "market" as const };
+        } catch (err) {
+          if (err instanceof Error && err.message.includes("403")) this.candlesUnavailable = true;
+          else throw err;
+        }
+      }
+      const free = await fetchFreeDailyBars(sym);
+      return { bars: free.bars.slice(-count), source: "market" as const };
+    });
+  }
+
+  async getNextEarningsDate(symbol: string): Promise<string | null> {
+    const sym = symbol.toUpperCase();
+    try {
+      return await cached(`finnhub:earnings:${sym}`, 12 * 60 * MINUTE_MS, async () => {
+        const today = new Date();
+        const to = new Date(today.getTime() + 60 * DAY_MS);
+        const iso = (d: Date) => d.toISOString().slice(0, 10);
+        const data = await this.request<FinnhubEarnings>("/calendar/earnings", {
+          symbol: sym,
+          from: iso(today),
+          to: iso(to),
+        });
+        const dates = (data.earningsCalendar ?? [])
+          .map((e) => e.date)
+          .filter(Boolean)
+          .sort();
+        return dates[0] ?? null;
+      });
+    } catch {
+      return null;
+    }
   }
 
   async getMarketStatus(now: Date = new Date()): Promise<MarketStatus> {

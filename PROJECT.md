@@ -222,6 +222,26 @@ Principles: small components, server components by default, client boundary as l
 
 ---
 
+## 6b. Probability calculator (`src/lib/quant/`)
+
+The Simulate page's central feature: a first-passage (barrier-hitting) model answering "how often does price cross the target before the stop within the horizon?"
+
+| Module | Responsibility |
+|---|---|
+| `rng.ts` | Seeded xoshiro128** generator, Marsaglia gaussian, Walker alias weighted sampler (reproducible runs) |
+| `stats.ts` | Return samples from daily bars (gap, intraday, range, excursions, true range), moments, EWMA volatility, regime, recency weights |
+| `calendar.ts` | Horizon → concrete sessions on the real US trading calendar (holidays, weekends, intraday remainder) |
+| `monte-carlo.ts` | Filtered historical simulation: recency-weighted bootstrap of real (gap, intraday) pairs scaled by the volatility regime; Brownian bridge inside each session calibrated to the real average daily range; exact bridge crossing probabilities between steps; first-touch ordering |
+| `empirical.ts` | Comparable past windows, normalized to the starting price; hit rates and order, with an OHLC order heuristic when both levels were hit in one bar |
+| `barrier.ts` | Distances in $, %, multiples of daily range / sigma / median excursion |
+| `ev.ts` | Reward/risk, probability-weighted expected value (barriers only and marked-to-market), position sizing |
+| `confidence.ts` | Data quality flags: sample size, regime, earnings inside the horizon, gap frequency, stale data, stops inside noise |
+| `explain.ts` | Template-based plain-English explanation. No language model; it cannot alter a number |
+| `engine.ts` | Orchestrates the above into a serializable `SimulationResult` |
+| `validate.ts` | Untrusted request → engine input |
+
+Data: `getDailyBars()` on the provider facade returns real OHLC bars only; the resilient wrapper does not fall back to the mock for this call, and `POST /api/simulate` returns "Unable to calculate probability because required market data is unavailable" instead. Every run is stored in `simulation_runs` with its seed for audit.
+
 ## 7. Financial calculation utilities (`src/lib/finance/`)
 
 All pure, all unit-tested, all operating on plain numbers with explicit rounding at the boundary.
