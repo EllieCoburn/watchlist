@@ -6,9 +6,12 @@ import {
   sessionClose,
 } from "../market-hours";
 import { findSymbol, searchDirectory } from "../symbols";
+import { groupIntoSessions } from "../intraday";
 import type {
   DailyBar,
   DailyBars,
+  IntradayBar,
+  IntradayHistory,
   MarketDataProvider,
   MarketStatus,
   PricePoint,
@@ -260,6 +263,58 @@ export class AlpacaMarketDataProvider implements MarketDataProvider {
       if (bars.length < 2) throw new Error(`Alpaca: no daily bars for ${sym}`);
       return { bars, source: "market" as const };
     });
+  }
+
+  async getIntradayHistory(
+    symbol: string,
+    sessions: number,
+    intervalMinutes: number,
+  ): Promise<IntradayHistory> {
+    const sym = symbol.toUpperCase();
+    return cached(
+      `alpaca:intraday-history:${sym}:${intervalMinutes}:${sessions}`,
+      12 * 60 * MINUTE_MS,
+      async () => {
+        const now = Date.now();
+        const start = now - Math.ceil(sessions * 1.5) * DAY_MS;
+        const bars: IntradayBar[] = [];
+        let pageToken: string | null = null;
+        let pages = 0;
+        do {
+          const params: Record<string, string> = {
+            symbols: sym,
+            timeframe: `${intervalMinutes}Min`,
+            start: new Date(start).toISOString(),
+            end: new Date(now).toISOString(),
+            limit: "10000",
+            feed: FEED,
+            sort: "asc",
+            adjustment: "split",
+          };
+          if (pageToken) params.page_token = pageToken;
+          const data: BarsResponse = await this.request<BarsResponse>(
+            DATA_BASE,
+            "/v2/stocks/bars",
+            params,
+          );
+          for (const b of data.bars[sym] ?? [])
+            bars.push({
+              t: Date.parse(b.t),
+              open: b.o,
+              high: b.h,
+              low: b.l,
+              close: b.c,
+              volume: b.v,
+            });
+          pageToken = data.next_page_token;
+          pages++;
+        } while (pageToken && pages < 12);
+        const grouped = groupIntoSessions(bars, intervalMinutes).slice(-sessions);
+        if (grouped.length < 20)
+          throw new Error(`Alpaca: only ${grouped.length} intraday sessions for ${sym}`);
+        return { sessions: grouped, intervalMinutes, source: "market" as const };
+      },
+    );
   }
 
   async getNextEarningsDate(): Promise<string | null> {

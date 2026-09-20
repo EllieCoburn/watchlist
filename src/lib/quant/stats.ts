@@ -195,3 +195,60 @@ export function weightedStd(xs: ArrayLike<number>, w: ArrayLike<number>): number
   }
   return t ? Math.sqrt(s / t) : 0;
 }
+
+/** Average true range over the last `n` samples, as a fraction of the previous close. */
+export function atrPct(samples: ReturnSample[], n = 14): number {
+  return mean(tail(samples, n).map((s) => s.trueRange));
+}
+
+/**
+ * Student-t degrees of freedom implied by excess kurtosis (κ = 6 / (ν − 4)), clamped to
+ * [3, 30]. Larger κ → heavier tails → smaller ν.
+ */
+export function studentTDofFromKurtosis(excessKurt: number): number {
+  if (!(excessKurt > 0)) return 30;
+  return Math.min(30, Math.max(3, 4 + 6 / excessKurt));
+}
+
+/** Standard Student-t draw (Bawens: normal / sqrt(chi²/ν)) scaled to unit variance. */
+export function studentT(rng: { gaussian(): number; uniform(): number }, dof: number): number {
+  // chi-square with ν degrees of freedom via sum of squared normals is slow for large ν;
+  // use the gamma-based shortcut: chi²(ν) = 2·Gamma(ν/2).
+  const chi2 = 2 * gammaSample(rng, dof / 2);
+  const t = rng.gaussian() / Math.sqrt(chi2 / dof);
+  return dof > 2 ? t * Math.sqrt((dof - 2) / dof) : t;
+}
+
+/** Marsaglia–Tsang gamma sampler (shape k, scale 1). */
+function gammaSample(rng: { gaussian(): number; uniform(): number }, k: number): number {
+  if (k < 1) {
+    const u = rng.uniform();
+    return gammaSample(rng, k + 1) * Math.pow(u, 1 / k);
+  }
+  const d = k - 1 / 3;
+  const c = 1 / Math.sqrt(9 * d);
+  for (;;) {
+    let x: number, v: number;
+    do {
+      x = rng.gaussian();
+      v = 1 + c * x;
+    } while (v <= 0);
+    v = v * v * v;
+    const u = rng.uniform();
+    if (u < 1 - 0.0331 * x ** 4) return d * v;
+    if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v;
+  }
+}
+
+/** Weighted percentile (weights need not sum to 1). */
+export function weightedPercentile(values: number[], weights: number[], p: number): number {
+  if (values.length === 0) return 0;
+  const idx = values.map((_, i) => i).sort((a, b) => values[a] - values[b]);
+  const total = weights.reduce((a, b) => a + b, 0) || 1;
+  let acc = 0;
+  for (const i of idx) {
+    acc += weights[i] / total;
+    if (acc >= p) return values[i];
+  }
+  return values[idx[idx.length - 1]];
+}

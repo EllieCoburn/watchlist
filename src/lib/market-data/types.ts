@@ -44,6 +44,25 @@ export type DailyBar = {
 
 export type DailyBars = { bars: DailyBar[]; source: SeriesSource };
 
+/** One intraday bar (regular hours). `t` is the bar's start, epoch ms. */
+export type IntradayBar = {
+  t: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume?: number;
+};
+
+/** All intraday bars of one regular session, in time order. */
+export type IntradaySession = { dateKey: string; bars: IntradayBar[]; intervalMinutes: number };
+
+export type IntradayHistory = {
+  sessions: IntradaySession[];
+  intervalMinutes: number;
+  source: SeriesSource;
+};
+
 export type MarketState =
   "open" | "closed-weekend" | "closed-holiday" | "pre-market" | "after-hours";
 
@@ -80,6 +99,15 @@ export interface MarketDataProvider {
    * engine, which refuses modeled bars, so a provider without real history must throw.
    */
   getDailyBars(symbol: string, count: number): Promise<DailyBars>;
+  /**
+   * Regular-hours intraday bars for roughly the last `sessions` completed sessions at
+   * `intervalMinutes` resolution. Must throw rather than return modeled data (dev mock excepted).
+   */
+  getIntradayHistory(
+    symbol: string,
+    sessions: number,
+    intervalMinutes: number,
+  ): Promise<IntradayHistory>;
   /** Next scheduled earnings date (YYYY-MM-DD) if the provider knows it; null when unknown. */
   getNextEarningsDate(symbol: string): Promise<string | null>;
   /** Prices between two instants (epoch ms), used for a trade's chart. Resolution is up to the provider. */

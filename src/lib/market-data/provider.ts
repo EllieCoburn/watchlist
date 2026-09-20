@@ -4,6 +4,7 @@ import { getMarketDataProvider } from "./providers";
 import { alignSeriesToQuote, computeRangeStats, tickWindow, type RangeStats } from "./range-stats";
 import type {
   DailyBars,
+  IntradayHistory,
   MarketStatus,
   PricePoint,
   Quote,
@@ -42,6 +43,15 @@ export function getPricesBetween(
 /** Real daily OHLC bars for the engine. Throws when the active provider has no real history. */
 export function getDailyBars(symbol: string, count: number): Promise<DailyBars> {
   return getMarketDataProvider().getDailyBars(symbol, count);
+}
+
+/** Real regular-hours intraday bars for the engines. Throws when unavailable. */
+export function getIntradayHistory(
+  symbol: string,
+  sessions: number,
+  intervalMinutes = 5,
+): Promise<IntradayHistory> {
+  return getMarketDataProvider().getIntradayHistory(symbol, sessions, intervalMinutes);
 }
 
 export function getNextEarningsDate(symbol: string): Promise<string | null> {

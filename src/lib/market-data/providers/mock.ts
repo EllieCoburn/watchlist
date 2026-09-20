@@ -10,6 +10,8 @@ import { findSymbol, searchDirectory } from "../symbols";
 import type {
   DailyBar,
   DailyBars,
+  IntradayHistory,
+  IntradaySession,
   MarketDataProvider,
   MarketStatus,
   PricePoint,
@@ -236,7 +238,7 @@ function buildQuote(symbol: string, now: number): Quote {
     changePercent: round4((change / previousClose) * 100),
     dayLow: round4(low),
     dayHigh: round4(high),
-    asOf: now,
+    asOf: Math.min(now, sessionClose(open)),
   };
 }
 
@@ -354,6 +356,47 @@ function buildDailyBars(symbol: string, count: number, now: number): DailyBar[] 
   return bars;
 }
 
+/** Modeled 5-minute sessions built from the intraday bridge (development only). */
+function buildIntradaySessions(
+  symbol: string,
+  count: number,
+  minutes: number,
+  now: number,
+): IntradaySession[] {
+  const latest = sessionIndexAt(now);
+  const complete = now >= sessionClose(sessionOpens[latest]) ? latest : latest - 1;
+  const first = Math.max(0, complete - count + 1);
+  const out: IntradaySession[] = [];
+  for (let i = first; i <= complete; i++) {
+    const open = sessionOpens[i];
+    const bars: IntradaySession["bars"] = [];
+    for (let m = 0; m + minutes <= SESSION_LENGTH_MINUTES; m += minutes) {
+      let hi = -Infinity,
+        lo = Infinity;
+      for (let k = 0; k <= minutes; k++) {
+        const p = priceInSession(symbol, i, m + k);
+        if (p > hi) hi = p;
+        if (p < lo) lo = p;
+      }
+      bars.push({
+        t: open + m * MINUTE_MS,
+        open: round4(priceInSession(symbol, i, m)),
+        high: round4(hi),
+        low: round4(lo),
+        close: round4(priceInSession(symbol, i, m + minutes)),
+      });
+    }
+    const day = new Date(open);
+    void day;
+    out.push({
+      dateKey: new Date(open).toISOString().slice(0, 10),
+      bars,
+      intervalMinutes: minutes,
+    });
+  }
+  return out;
+}
+
 export class MockMarketDataProvider implements MarketDataProvider {
   readonly id = "mock";
   readonly dataLabel = "modeled prices · not live";
@@ -382,6 +425,18 @@ export class MockMarketDataProvider implements MarketDataProvider {
 
   async getDailyBars(symbol: string, count: number): Promise<DailyBars> {
     return { bars: buildDailyBars(symbol.toUpperCase(), count, this.now()), source: "modeled" };
+  }
+
+  async getIntradayHistory(
+    symbol: string,
+    sessions: number,
+    intervalMinutes: number,
+  ): Promise<IntradayHistory> {
+    return {
+      sessions: buildIntradaySessions(symbol.toUpperCase(), sessions, intervalMinutes, this.now()),
+      intervalMinutes,
+      source: "modeled",
+    };
   }
 
   async getNextEarningsDate(): Promise<string | null> {

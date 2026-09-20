@@ -1,108 +1,139 @@
+import type { BacktestResult } from "./backtest";
+import type { EventFlag } from "./events";
 import type { VolRegime } from "./stats";
 
 export type ConfidenceLevel = "high" | "moderate" | "low";
 
 export type ModelConfidence = {
   level: ConfidenceLevel;
-  observations: number;
-  paths: number;
-  volatilityWindows: string;
-  regime: VolRegime;
-  regimePercentile: number;
+  /** Plain reasons, best first, shown under the level. */
+  reasons: string[];
   warnings: string[];
-  notes: string[];
 };
 
 export type ConfidenceInput = {
-  observations: number;
-  paths: number;
+  analogSelected: number;
+  analogEss: number;
+  analogSufficient: boolean;
+  disagreement: number;
+  backtest: BacktestResult | null;
   regime: VolRegime;
-  regimePercentile: number;
-  excessKurtosis: number;
-  targetRangeMultiple: number;
-  stopRangeMultiple: number;
-  earningsDate: string | null;
-  horizonDates: string[];
-  maxAbsGapPct: number;
-  recentLargeGaps: number;
-  dataSource: string;
-  lastBarDate: string;
+  intradayAvailable: boolean;
+  intradayCoverage: number;
+  observations: number;
+  events: EventFlag[];
+  lastSessionZ: number;
+  lastGap: number;
+  largeGaps: number;
   staleDays: number;
+  referenceKind: string;
   horizonNote: string | null;
+  sanityFailures: string[];
 };
 
+/**
+ * Confidence is a score built from measurable things: analog sample size, agreement
+ * between engines, backtest calibration, data completeness, regime and event risk.
+ * It is never a fixed label.
+ */
 export function assessConfidence(c: ConfidenceInput): ModelConfidence {
+  const reasons: string[] = [];
   const warnings: string[] = [];
-  const notes: string[] = [];
+  let score = 0; // higher is better
 
-  if (c.observations < 60)
-    warnings.push(
-      `Only ${c.observations} historical sessions were available. Estimates from short histories are unstable.`,
-    );
-  else if (c.observations < 150)
-    notes.push(
-      `${c.observations} historical sessions used; a full year (252) would give steadier estimates.`,
-    );
-
-  if (c.regime === "extreme")
-    warnings.push(
-      "Volatility is in the top 10% of the past year. Barrier probabilities move quickly in this regime.",
-    );
-  else if (c.regime === "elevated")
-    notes.push(
-      "Volatility is elevated versus the past year; recent sessions are weighted more heavily.",
-    );
-  else if (c.regime === "low")
-    notes.push("Volatility is low versus the past year; the model scales history down to match.");
-
-  if (c.earningsDate) {
-    if (c.horizonDates.includes(c.earningsDate))
-      warnings.push(
-        `Earnings are scheduled on ${c.earningsDate}, inside the simulated period. Earnings moves are far larger than normal sessions and this model does not account for them.`,
-      );
-    else notes.push(`Next earnings date on record: ${c.earningsDate}.`);
-  } else {
-    notes.push(
-      "Earnings date unknown: check the company's calendar before relying on this estimate.",
-    );
+  if (c.sanityFailures.length) {
+    warnings.push(`Automated checks failed: ${c.sanityFailures[0]}`);
+    score -= 5;
   }
 
-  if (c.recentLargeGaps >= 3)
+  if (c.analogSufficient) {
+    reasons.push(
+      `${c.analogSelected} comparable sessions (effective sample ${c.analogEss.toFixed(0)})`,
+    );
+    score += 1;
+  } else {
     warnings.push(
-      `The stock gapped more than 3% at the open ${c.recentLargeGaps} times in the last 60 sessions. Stops can be jumped by gaps.`,
+      `Only ${c.analogSelected} comparable sessions (effective sample ${c.analogEss.toFixed(0)}); the analog estimate is thin.`,
     );
-  if (c.excessKurtosis > 3)
-    notes.push(
-      "Returns show fat tails (large moves happen more often than a bell curve suggests); the model uses the stock's own history rather than a normal distribution.",
-    );
+    score -= 1;
+  }
 
-  if (c.targetRangeMultiple < 0.3)
-    notes.push(
-      "The target sits inside a typical day's range, so it is often reached by ordinary noise.",
-    );
-  if (c.stopRangeMultiple < 0.3)
+  if (c.disagreement < 0.1) {
+    reasons.push("the three models broadly agree on which level comes first");
+    score += 1;
+  } else if (c.disagreement < 0.2) {
+    reasons.push(`models differ by ${Math.round(c.disagreement * 100)} points on target-first`);
+  } else {
     warnings.push(
-      "The stop sits inside a typical day's range, so ordinary noise is likely to trigger it.",
+      `Models disagree by ${Math.round(c.disagreement * 100)} points on which level comes first; treat the combined figure as uncertain.`,
     );
+    score -= 1;
+  }
 
-  if (c.staleDays > 3)
+  const bt = c.backtest?.perEngine.combined.targetFirst;
+  if (bt && bt.n >= 30 && Number.isFinite(bt.ece)) {
+    if (bt.ece < 0.08) {
+      reasons.push(
+        `backtest calibration error ${(bt.ece * 100).toFixed(1)} points over ${bt.n} dates`,
+      );
+      score += 1;
+    } else if (bt.ece < 0.15) {
+      reasons.push(
+        `backtest calibration error ${(bt.ece * 100).toFixed(1)} points over ${bt.n} dates`,
+      );
+    } else {
+      warnings.push(
+        `Backtest calibration error is ${(bt.ece * 100).toFixed(1)} points over ${bt.n} dates: probabilities have been miscalibrated for this setup historically.`,
+      );
+      score -= 1;
+    }
+  } else warnings.push("Not enough backtest dates to measure calibration for this setup.");
+
+  if (c.intradayAvailable)
+    reasons.push(
+      `intraday bars available (${Math.round(c.intradayCoverage * 100)}% of analogs replayed at 5-minute resolution)`,
+    );
+  else {
     warnings.push(
-      `The most recent daily bar is from ${c.lastBarDate}, ${c.staleDays} days ago. Recent behaviour is missing from the model.`,
+      "No intraday bars: first-touch order inside a session cannot be observed, only modeled.",
     );
-  if (c.horizonNote) notes.push(c.horizonNote);
+    score -= 1;
+  }
 
-  let level: ConfidenceLevel = "high";
-  if (warnings.length >= 2 || c.observations < 60) level = "low";
-  else if (warnings.length === 1 || c.observations < 150) level = "moderate";
+  if (c.observations < 150) {
+    warnings.push(`Only ${c.observations} historical sessions.`);
+    score -= 1;
+  }
+  if (c.regime === "extreme") {
+    warnings.push("Volatility is in the top 10% of the past year.");
+    score -= 1;
+  } else if (c.regime === "elevated")
+    reasons.push("current volatility elevated versus the past year");
+  for (const e of c.events) {
+    warnings.push(e.message);
+    score -= e.kind === "earnings" ? 2 : 1;
+  }
+  if (Math.abs(c.lastSessionZ) > 2.5)
+    warnings.push(
+      `The last session was a ${c.lastSessionZ.toFixed(1)}-sigma move; the next session follows an unusual day.`,
+    );
+  if (Math.abs(c.lastGap) > 0.03)
+    warnings.push(`The last session opened with a ${(c.lastGap * 100).toFixed(1)}% gap.`);
+  if (c.largeGaps >= 3)
+    warnings.push(
+      `${c.largeGaps} gaps above 2% in the last 60 sessions: stops can be jumped overnight.`,
+    );
+  if (c.staleDays > 4) {
+    warnings.push(`Most recent daily bar is ${c.staleDays} days old.`);
+    score -= 1;
+  }
+  if (c.referenceKind === "premarket" || c.referenceKind === "after-hours")
+    reasons.push(
+      "using a live extended-hours reference price; the residual gap to the open is modeled at half strength",
+    );
+  if (c.horizonNote) reasons.push(c.horizonNote);
 
-  return {
-    level,
-    observations: c.observations,
-    paths: c.paths,
-    volatilityWindows: "20 / 60 / 252 days, exponentially weighted (60-day half-life)",
-    regime: c.regime,
-    regimePercentile: c.regimePercentile,
-    warnings,
-    notes,
-  };
+  const level: ConfidenceLevel =
+    score >= 3 && warnings.length === 0 ? "high" : score >= 0 ? "moderate" : "low";
+  return { level, reasons, warnings };
 }

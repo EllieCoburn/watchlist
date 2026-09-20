@@ -1,5 +1,6 @@
 import type {
   DailyBars,
+  IntradayHistory,
   MarketDataProvider,
   MarketStatus,
   PricePoint,
@@ -67,6 +68,13 @@ export class ResilientProvider implements MarketDataProvider {
   /** Daily bars feed the simulation engine, which must never see modeled data: no fallback here. */
   getDailyBars(symbol: string, count: number): Promise<DailyBars> {
     return this.primary.getDailyBars(symbol, count);
+  }
+  getIntradayHistory(
+    symbol: string,
+    sessions: number,
+    intervalMinutes: number,
+  ): Promise<IntradayHistory> {
+    return this.primary.getIntradayHistory(symbol, sessions, intervalMinutes);
   }
   getNextEarningsDate(symbol: string): Promise<string | null> {
     return this.primary.getNextEarningsDate(symbol).catch(() => null);

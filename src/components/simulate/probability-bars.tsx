@@ -63,10 +63,22 @@ export function TouchProbabilities({ target, stop, pTarget, pStop, paths }: Touc
   );
 }
 
-type FirstProps = { targetFirst: number; stopFirst: number; neither: number; both: number };
+type FirstProps = {
+  targetFirst: number;
+  stopFirst: number;
+  neither: number;
+  both: number;
+  ambiguous?: number;
+};
 
 /** Which level is reached first: one segmented bar with gaps, plus the numbers. */
-export function FirstLevelReached({ targetFirst, stopFirst, neither, both }: FirstProps) {
+export function FirstLevelReached({
+  targetFirst,
+  stopFirst,
+  neither,
+  both,
+  ambiguous = 0,
+}: FirstProps) {
   const rows = [
     {
       key: "t",
@@ -83,6 +95,17 @@ export function FirstLevelReached({ targetFirst, stopFirst, neither, both }: Fir
       text: "text-loss-text",
     },
     { key: "n", label: "Neither", value: neither, bar: "bg-faint", text: "text-ink" },
+    ...(ambiguous > 0.0005
+      ? [
+          {
+            key: "a",
+            label: "Ambiguous",
+            value: ambiguous,
+            bar: "bg-border-strong",
+            text: "text-muted",
+          },
+        ]
+      : []),
   ];
   return (
     <section
@@ -95,7 +118,7 @@ export function FirstLevelReached({ targetFirst, stopFirst, neither, both }: Fir
       <div
         className="mt-5 flex h-3 gap-0.5 overflow-hidden rounded-full"
         role="img"
-        aria-label={`Target first ${pct(targetFirst)}, stop first ${pct(stopFirst)}, neither ${pct(neither)}`}
+        aria-label={`Target first ${pct(targetFirst)}, stop first ${pct(stopFirst)}, neither ${pct(neither)}, ambiguous ${pct(ambiguous)}`}
       >
         {rows
           .filter((r) => r.value > 0)
@@ -107,7 +130,7 @@ export function FirstLevelReached({ targetFirst, stopFirst, neither, both }: Fir
             />
           ))}
       </div>
-      <dl className="mt-5 grid grid-cols-3 gap-4">
+      <dl className={cn("mt-5 grid gap-4", rows.length === 4 ? "grid-cols-4" : "grid-cols-3")}>
         {rows.map((r) => (
           <div key={r.key}>
             <dt className={cn("label-caps", r.text)}>{r.label}</dt>

@@ -7,11 +7,13 @@ import {
 } from "../market-hours";
 import { RateBudget } from "../rate-limit";
 import { fetchFreeDailyBars, fetchFreeHistory } from "../sources/history";
+import { fetchPolygonIntradayHistory, isPolygonConfigured } from "../sources/polygon";
 import { fetchDailyCloses } from "../sources/stooq";
 import { findSymbol, searchDirectory } from "../symbols";
 import type {
   DailyBar,
   DailyBars,
+  IntradayHistory,
   MarketDataProvider,
   MarketStatus,
   PricePoint,
@@ -337,6 +339,19 @@ export class FinnhubMarketDataProvider implements MarketDataProvider {
       const free = await fetchFreeDailyBars(sym);
       return { bars: free.bars.slice(-count), source: "market" as const };
     });
+  }
+
+  async getIntradayHistory(
+    symbol: string,
+    sessions: number,
+    intervalMinutes: number,
+  ): Promise<IntradayHistory> {
+    // Finnhub's free plan has no candles; the history provider supplies intraday bars.
+    if (isPolygonConfigured())
+      return fetchPolygonIntradayHistory(symbol, sessions, intervalMinutes);
+    throw new Error(
+      "Intraday history is not available: configure HISTORY_PROVIDER=polygon (or use the Alpaca provider).",
+    );
   }
 
   async getNextEarningsDate(symbol: string): Promise<string | null> {

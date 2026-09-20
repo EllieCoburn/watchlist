@@ -1,6 +1,7 @@
 import { cached } from "../cache";
 import { RateBudget } from "../rate-limit";
-import type { DailyBar, PricePoint } from "../types";
+import { groupIntoSessions } from "../intraday";
+import type { DailyBar, IntradayBar, IntradayHistory, PricePoint } from "../types";
 
 /**
  * Polygon.io daily aggregates (free "Basic" plan: end-of-day bars, 2 years of history,
@@ -18,6 +19,7 @@ type PolygonAggsResponse = {
   results?: PolygonAgg[];
   error?: string;
   message?: string;
+  next_url?: string;
 };
 
 export function mapPolygonAggs(results: PolygonAgg[] | undefined): PricePoint[] {
@@ -39,6 +41,54 @@ export function mapPolygonBars(results: PolygonAgg[] | undefined): DailyBar[] {
     .filter((a) => Number.isFinite(a.t) && a.o > 0 && a.h > 0 && a.l > 0 && a.c > 0)
     .map((a) => ({ t: a.t, open: r(a.o), high: r(a.h), low: r(a.l), close: r(a.c), volume: a.v }))
     .sort((a, b) => a.t - b.t);
+}
+
+/**
+ * Intraday history for about `sessions` completed sessions (regular hours only), paginated.
+ * Free plan: finished sessions only, 5 requests/minute, so this is cached for 12 hours.
+ */
+export async function fetchPolygonIntradayHistory(
+  symbol: string,
+  sessions: number,
+  minutes: number,
+): Promise<IntradayHistory> {
+  const key = process.env.HISTORY_API_KEY;
+  if (!key) throw new Error("Polygon: HISTORY_API_KEY is not set");
+  const sym = symbol.toUpperCase();
+  return cached(
+    `polygon:intraday-history:${sym}:${minutes}:${sessions}`,
+    12 * 60 * 60_000,
+    async () => {
+      const now = Date.now();
+      const from = now - Math.ceil(sessions * 1.5) * DAY_MS;
+      const headers = { Authorization: `Bearer ${key}`, Accept: "application/json" };
+      let url: string | null =
+        `${BASE}/v2/aggs/ticker/${encodeURIComponent(sym)}/range/${minutes}/minute/${isoDate(from)}/${isoDate(now)}?adjusted=true&sort=asc&limit=50000`;
+      const bars: IntradayBar[] = [];
+      let pages = 0;
+      while (url && pages < 4) {
+        if (!budget.take())
+          throw new Error(
+            "Polygon: request budget spent for this minute (intraday history needs 1–3 calls; retry shortly)",
+          );
+        const res = await fetch(url, { cache: "no-store", headers });
+        if (!res.ok) throw new Error(`Polygon ${sym} intraday history failed: ${res.status}`);
+        const data = (await res.json()) as PolygonAggsResponse;
+        if (data.error || data.status === "ERROR")
+          throw new Error(`Polygon ${sym}: ${data.error ?? data.message ?? "error"}`);
+        for (const a of data.results ?? []) {
+          if (a.o > 0 && a.h > 0 && a.l > 0 && a.c > 0)
+            bars.push({ t: a.t, open: a.o, high: a.h, low: a.l, close: a.c, volume: a.v });
+        }
+        url = data.next_url ?? null;
+        pages++;
+      }
+      const grouped = groupIntoSessions(bars, minutes).slice(-sessions);
+      if (grouped.length < 20)
+        throw new Error(`Polygon ${sym}: only ${grouped.length} intraday sessions available`);
+      return { sessions: grouped, intervalMinutes: minutes, source: "market" as const };
+    },
+  );
 }
 
 /** About a year of daily OHLC bars, cached for an hour. */
