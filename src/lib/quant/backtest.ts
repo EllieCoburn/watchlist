@@ -163,7 +163,7 @@ export function runBacktest(
     for (let i = 0; i < h; i++) {
       const b = w.bars[d + i];
       const s = byDate.get(dateKeyOf(b));
-      if (s && s.bars.length >= 60)
+      if (s && s.bars.length >= minBars)
         for (const ib of s.bars)
           path.push({ open: ib.open, high: ib.high, low: ib.low, close: ib.close });
       else path.push(dailyToPathBar(b));

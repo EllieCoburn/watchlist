@@ -108,7 +108,6 @@ export function evaluatePath(
           out.targetTouched = true;
           out.first = "ambiguous";
           out.ambiguousBar = i;
-          out.ambiguousBar = i;
         } else if (hitS) out.first = "stop";
       } else {
         // Buy stop filled on the way up. Target (further up) is certainly after the fill.
@@ -118,7 +117,6 @@ export function evaluatePath(
         if (hitS) {
           out.stopTouched = true;
           out.first = "ambiguous";
-          out.ambiguousBar = i;
           out.ambiguousBar = i;
         } else if (hitT) out.first = "target";
       }

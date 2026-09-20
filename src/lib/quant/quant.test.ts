@@ -19,7 +19,6 @@ import {
   excessKurtosis,
   mean,
   percentile,
-  returnSamples,
   skewness,
   std,
   studentT,
